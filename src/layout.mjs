@@ -28,14 +28,22 @@ export const NAV = [
 // где открыт сайт, и проверяется тестами.
 // 'unsafe-eval' нужен только декодеру HEIC (heic2any собран Emscripten и создаёт функции через new Function
 // в своём Worker). Встроенные скрипты и чужие адреса по-прежнему запрещены.
+// Адреса Яндекс Метрики — по документации «Установка счётчика при использовании CSP»:
+// региональные mc.yandex.*, Вебвизор и yastatic.net.
+export const METRIKA_HOSTS = ['ru', 'az', 'by', 'co.il', 'com', 'com.am', 'com.ge', 'com.tr', 'ee', 'fr', 'kg', 'kz', 'lt', 'lv', 'md', 'tj', 'tm', 'uz']
+  .map(z => 'mc.yandex.' + z).concat('mc.webvisor.com', 'mc.webvisor.org', 'yastatic.net');
+const METRIKA_HTTPS = METRIKA_HOSTS.map(h => 'https://' + h).join(' ');
+const METRIKA_WSS = METRIKA_HOSTS.map(h => 'wss://' + h).join(' ');
+
 export const CSP = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-eval' https://cdn.jsdelivr.net/npm/pako@1.0.11/ https://cdn.jsdelivr.net/npm/utif@3.1.0/ https://cdn.jsdelivr.net/npm/heic2any@0.0.4/",
+  "script-src 'self' 'unsafe-eval' https://cdn.jsdelivr.net/npm/pako@1.0.11/ https://cdn.jsdelivr.net/npm/utif@3.1.0/ https://cdn.jsdelivr.net/npm/heic2any@0.0.4/ " + METRIKA_HTTPS,
   "worker-src 'self' blob:",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "font-src https://fonts.gstatic.com",
-  "img-src 'self' data: blob: https://hits.sh",
-  "connect-src 'self' blob: data:",
+  "img-src 'self' data: blob: https://hits.sh " + METRIKA_HTTPS,
+  "connect-src 'self' blob: data: " + METRIKA_HTTPS + ' ' + METRIKA_WSS,
+  "frame-src 'self' " + METRIKA_HTTPS,
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'"
@@ -48,6 +56,7 @@ function head(p, site, assets) {
     `<meta charset="utf-8">`,
     `<meta http-equiv="Content-Security-Policy" content="${CSP}">`,
     `<meta name="referrer" content="strict-origin-when-cross-origin">`,
+    site.metrika ? `<script src="${assets['metrika.js']}" data-id="${site.metrika}" data-host="${esc(new URL(site.url).host)}" async></script>` : '',
     `<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">`,
     `<title>${esc(p.title)}</title>`,
     `<meta name="description" content="${esc(p.description)}">`,
@@ -156,7 +165,7 @@ export function converter() {
         <div class="drop-formats mono" id="in-list">Принимаем: PNG · JPEG · WEBP · AVIF · GIF · BMP · ICO · SVG · TIFF · HEIC · TGA · PPM/PGM/PBM</div>
       </div>
     </label>
-    <div class="queue" id="queue" hidden>
+    <div class="queue ym-hide-content" id="queue" hidden>
       <div class="queue-head">
         <div class="q-title"><h2 id="q-title">Очередь</h2><span class="mono" id="q-summary"></span></div>
         <button class="btn ghost" id="clear" type="button">Очистить</button>
@@ -244,7 +253,7 @@ export function converter() {
 </section>`;
 }
 
-const APP_TAIL = `<dialog id="dlg" aria-labelledby="dlg-title">
+const APP_TAIL = `<dialog id="dlg" class="ym-hide-content" aria-labelledby="dlg-title">
   <div class="dlg-head">
     <h3 id="dlg-title"></h3>
     <div class="row-actions">
@@ -306,6 +315,7 @@ ${p.preset ? `<script type="application/json" id="preset">${JSON.stringify(p.pre
 ${head(p, site, assets)}
 </head>
 <body>
+${site.metrika ? `<noscript><div><img src="https://mc.yandex.ru/watch/${site.metrika}" style="position:absolute; left:-9999px;" alt=""></div></noscript>` : ''}
 ${header(p)}
 ${crumbs}
 <main id="main">

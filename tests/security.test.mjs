@@ -198,8 +198,67 @@ test('счётчик посещений не загружается вне на�
 
 test('render.yaml задаёт заголовки безопасности', async () => {
   const yaml = await fs.readFile(path.join(PROJECT, 'render.yaml'), 'utf8');
-  for (const h of ['X-Content-Type-Options', 'Referrer-Policy', 'X-Frame-Options', 'Strict-Transport-Security', 'Permissions-Policy', 'Cross-Origin-Opener-Policy']) {
+  for (const h of ['X-Content-Type-Options', 'Referrer-Policy', 'Strict-Transport-Security', 'Permissions-Policy', 'Cross-Origin-Opener-Policy']) {
     assert.match(yaml, new RegExp(`name: ${h}\\n`), 'нет ' + h);
   }
-  assert.match(yaml, /value: frame-ancestors 'self'/);
+  // во фреймы сайт пускает только себя и Яндекс Метрику (Вебвизор, карта кликов)
+  const fa = yaml.match(/value: (frame-ancestors [^\n]+)/)[1];
+  assert.match(fa, /^frame-ancestors 'self' /);
+  for (const src of fa.split(' ').slice(2)) assert.match(src, /^https:\/\/\*\.yandex\.[a-z.]+$/, 'чужой источник фреймов: ' + src);
+  assert.doesNotMatch(yaml, /name: X-Frame-Options/, 'X-Frame-Options запретил бы Вебвизор');
+});
+
+test('Яндекс Метрика: запускается с нужным номером, скрывает файлы от Вебвизора, показывает уведомление о cookies', async () => {
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  const problems = [];
+  page.on('pageerror', e => problems.push(e.message));
+  await page.addInitScript(() => { window.__csp = []; document.addEventListener('securitypolicyviolation', e => window.__csp.push(e.violatedDirective + ' ' + e.blockedURI)); });
+  const host = new URL(server.url).host;
+  const tagRequests = [];
+  // страница «думает», что открыта на боевом домене; tag.js подменяем, чтобы в настоящую Метрику ничего не ушло
+  await page.route('**/mc.yandex.ru/**', r => { tagRequests.push(r.request().url()); r.fulfill({ contentType: 'text/javascript', body: 'window.__ymTag = true;' }); });
+  await page.route(server.url + '/**', async r => {
+    const res = await r.fetch();
+    const type = res.headers()['content-type'] || '';
+    if (!type.includes('text/html')) return r.fulfill({ response: res });
+    r.fulfill({ response: res, body: (await res.text()).replace(/data-host="[^"]+"/g, `data-host="${host}"`) });
+  });
+  try {
+    await page.goto(server.url + '/');
+    await page.waitForFunction(() => window.__ymTag === true);
+    assert.ok(tagRequests.some(u => u.includes('/metrika/tag.js?id=113053384')), 'tag.js с номером счётчика');
+    const init = await page.evaluate(() => (window.ym.a || []).map(a => Array.from(a)).find(a => a[1] === 'init'));
+    assert.equal(init[0], 113053384);
+    assert.equal(init[2].webvisor, true);
+    assert.equal(init[2].clickmap, true);
+    assert.ok(await page.locator('#queue').evaluate(e => e.classList.contains('ym-hide-content')), 'очередь скрыта от Вебвизора');
+    assert.ok(await page.locator('#dlg').evaluate(e => e.classList.contains('ym-hide-content')), 'окно сравнения скрыто от Вебвизора');
+
+    const bar = page.locator('.cookie-bar');
+    await bar.waitFor();
+    assert.match(await bar.innerText(), /cookies и Яндекс Метрику[\s\S]*картинки при этом никуда не передаются/);
+    await bar.getByRole('button', { name: 'Понятно' }).click();
+    assert.equal(await bar.count(), 0);
+    await page.reload();
+    await page.waitForFunction(() => window.__ymTag === true);
+    await page.waitForTimeout(300);
+    assert.equal(await page.locator('.cookie-bar').count(), 0, 'после «Понятно» уведомление больше не появляется');
+    assert.deepEqual(await page.evaluate(() => window.__csp), []);
+    assert.deepEqual(problems, []);
+  } finally { await context.close(); }
+});
+
+test('Яндекс Метрика не запускается вне боевого домена', async () => {
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  const requests = [];
+  page.on('request', r => { if (r.url().includes('yandex')) requests.push(r.url()); });
+  try {
+    await page.goto(server.url + '/');
+    await page.waitForTimeout(500);
+    assert.deepEqual(requests, []);
+    assert.equal(await page.evaluate(() => typeof window.ym), 'undefined');
+    assert.equal(await page.locator('.cookie-bar').count(), 0);
+  } finally { await context.close(); }
 });

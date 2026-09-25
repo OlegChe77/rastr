@@ -37,10 +37,11 @@ ok(robots.includes(`Sitemap: ${base}/sitemap.xml`), 'robots.txt указывае
 
 const js = await get('/assets/app.js');
 ok(js.status === 200 && /javascript/.test(js.headers.get('content-type') || ''), 'скрипт конвертера отдаётся как JavaScript', js.headers.get('content-type'));
-for (const h of ['x-content-type-options', 'x-frame-options', 'referrer-policy', 'strict-transport-security', 'permissions-policy', 'cross-origin-opener-policy']) {
+for (const h of ['x-content-type-options', 'referrer-policy', 'strict-transport-security', 'permissions-policy', 'cross-origin-opener-policy']) {
   ok(!!home.headers.get(h), 'заголовок ' + h, home.headers.get(h) || 'нет');
 }
-ok(/frame-ancestors 'self'/.test(home.headers.get('content-security-policy') || ''), 'CSP-заголовок запрещает чужие фреймы', home.headers.get('content-security-policy'));
+ok(/^frame-ancestors 'self' https:\/\/\*\.yandex\.ru/.test(home.headers.get('content-security-policy') || ''), 'во фреймы пускаются только сайт и Яндекс Метрика', home.headers.get('content-security-policy'));
+ok(/metrika\.js\?v=[0-9a-f]+" data-id="\d+"/.test(html), 'Яндекс Метрика подключена в <head>');
 ok(/<meta http-equiv="Content-Security-Policy" content="default-src 'self'/.test(html), 'политика безопасности (CSP) встроена в страницу');
 ok(/id="counter"[^>]*data-host="/.test(html), 'счётчик посещений есть в подвале');
 // главная hits.sh, а не сама картинка: запрос картинки прибавил бы посещение

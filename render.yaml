@@ -84,9 +84,6 @@ services:
       - path: /*
         name: Referrer-Policy
         value: strict-origin-when-cross-origin
-      - path: /*
-        name: X-Frame-Options
-        value: SAMEORIGIN
       # всегда только HTTPS
       - path: /*
         name: Strict-Transport-Security
@@ -99,10 +96,12 @@ services:
         name: Cross-Origin-Opener-Policy
         value: same-origin
       # Основная политика безопасности (CSP) встроена в каждую страницу метатегом, см. src/layout.mjs.
-      # Здесь — только то, что метатегом задать нельзя: запрет встраивать сайт в чужие фреймы.
+      # Здесь — только то, что метатегом задать нельзя: кто может показывать сайт во фрейме.
+      # Разрешены сам сайт и Яндекс Метрика (просмотр записей Вебвизора и карты кликов).
+      # X-Frame-Options не используется: он не умеет разрешать отдельные сайты.
       - path: /*
         name: Content-Security-Policy
-        value: frame-ancestors 'self'
+        value: frame-ancestors 'self' https://*.yandex.ru https://*.yandex.by https://*.yandex.kz https://*.yandex.uz https://*.yandex.com https://*.yandex.com.tr
       # Стили и скрипты подключены с ?v=хеш, поэтому их можно долго кешировать;
       # остальные файлы в /assets/ (картинки-превью, иконки) кешируются на неделю
       - path: /assets/*

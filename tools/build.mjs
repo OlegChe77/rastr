@@ -36,6 +36,8 @@ async function build() {
   await fs.rm(DIST, { recursive: true, force: true });
   await fs.mkdir(DIST, { recursive: true });
   await fs.cp(path.join(SRC, 'assets'), path.join(DIST, 'assets'), { recursive: true });
+  // Файлы, которые должны лежать в корне сайта как есть: подтверждения Яндекс Вебмастера, Google и т. п.
+  if (await exists(path.join(SRC, 'static'))) await fs.cp(path.join(SRC, 'static'), DIST, { recursive: true });
 
   const assets = {};
   for (const n of ['site.css', 'app.js', 'rastr-convert.js', 'counter.js']) assets[n] = await hashed(n);

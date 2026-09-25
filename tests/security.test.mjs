@@ -15,7 +15,8 @@ before(async () => {
     for (const e of await fs.readdir(dir, { withFileTypes: true })) {
       const p = path.join(dir, e.name);
       if (e.isDirectory()) { if (e.name !== 'assets') await walk(p); }
-      else if (e.name.endsWith('.html')) files.push(p);
+      // файлы подтверждения Яндекс Вебмастера / Google должны быть ровно такими, как выдал сервис
+      else if (e.name.endsWith('.html') && !/^(yandex_[0-9a-f]+|google[0-9a-f]+)\.html$/.test(e.name)) files.push(p);
     }
   };
   await walk(ROOT);

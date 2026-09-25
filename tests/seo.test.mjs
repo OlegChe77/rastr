@@ -10,6 +10,7 @@ import { execFileSync } from 'node:child_process';
 import { landings } from '../src/content/landings.mjs';
 
 const SITE = config.url.replace(/\/+$/, '');
+const VERIFY = /^(yandex_[0-9a-f]+|google[0-9a-f]+)\.html$/;
 let server, browser, pages;
 
 const read = async p => fs.readFile(path.join(ROOT, p.endsWith('/') ? p + 'index.html' : p), 'utf8');
@@ -35,7 +36,8 @@ test('sitemap.xml перечисляет все страницы сайта, к�
     }
   };
   await walk(ROOT);
-  const expected = files.filter(f => f !== '404.html').map(f => '/' + f.replace(/index\.html$/, '')).sort();
+  // 404 и файлы подтверждения Яндекс Вебмастера / Google — не страницы сайта
+  const expected = files.filter(f => f !== '404.html' && !VERIFY.test(f)).map(f => '/' + f.replace(/index\.html$/, '')).sort();
   assert.deepEqual(pages.map(p => p.path).sort(), expected);
   assert.ok(pages.length >= 20, 'страниц в sitemap: ' + pages.length);
 });
@@ -144,6 +146,18 @@ test('render.yaml перенаправляет адреса без слеша н
   const routes = [...yaml.matchAll(/source: (\S+)\n\s+destination: (\S+)/g)].map(m => [m[1], m[2]]);
   const expected = pages.map(p => p.path).filter(p => p !== '/').map(p => [p.slice(0, -1), p]);
   assert.deepEqual(routes.sort(), expected.sort());
+});
+
+test('файлы подтверждения Вебмастера лежат в корне сайта без изменений', async () => {
+  const src = path.join(PROJECT, 'src', 'static');
+  const files = (await fs.readdir(src)).filter(f => VERIFY.test(f));
+  assert.ok(files.includes('yandex_f51701b5f568b23c.html'), 'нет файла Яндекс Вебмастера');
+  for (const f of files) {
+    assert.equal(await fs.readFile(path.join(ROOT, f), 'utf8'), await fs.readFile(path.join(src, f), 'utf8'), f);
+    const res = await fetch(server.url + '/' + f);
+    assert.equal(res.status, 200, f);
+  }
+  assert.match(await fs.readFile(path.join(ROOT, 'yandex_f51701b5f568b23c.html'), 'utf8'), /Verification: f51701b5f568b23c/);
 });
 
 test('robots.txt открывает сайт и указывает на sitemap', async () => {

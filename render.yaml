@@ -14,6 +14,66 @@ services:
       # Пока своего домена нет, укажите адрес вида https://rastr.onrender.com
       - key: SITE_URL
         sync: false
+    # Адреса без слеша в конце ведут на канонические, со слешем (301), чтобы у каждой страницы был один адрес.
+    # Список проверяется тестом tests/seo.test.mjs — при добавлении страницы допишите её сюда.
+    routes:
+      - type: redirect
+        source: /png-v-jpg
+        destination: /png-v-jpg/
+      - type: redirect
+        source: /jpg-v-png
+        destination: /jpg-v-png/
+      - type: redirect
+        source: /heic-v-jpg
+        destination: /heic-v-jpg/
+      - type: redirect
+        source: /webp-v-jpg
+        destination: /webp-v-jpg/
+      - type: redirect
+        source: /webp-v-png
+        destination: /webp-v-png/
+      - type: redirect
+        source: /jpg-v-webp
+        destination: /jpg-v-webp/
+      - type: redirect
+        source: /png-v-webp
+        destination: /png-v-webp/
+      - type: redirect
+        source: /avif-v-jpg
+        destination: /avif-v-jpg/
+      - type: redirect
+        source: /jpg-v-pdf
+        destination: /jpg-v-pdf/
+      - type: redirect
+        source: /png-v-ico
+        destination: /png-v-ico/
+      - type: redirect
+        source: /svg-v-png
+        destination: /svg-v-png/
+      - type: redirect
+        source: /tiff-v-jpg
+        destination: /tiff-v-jpg/
+      - type: redirect
+        source: /szhat-foto
+        destination: /szhat-foto/
+      - type: redirect
+        source: /izmenit-razmer-foto
+        destination: /izmenit-razmer-foto/
+      - type: redirect
+        source: /formaty
+        destination: /formaty/
+      - type: redirect
+        source: /instrukciya
+        destination: /instrukciya/
+      - type: redirect
+        source: /konfidencialnost
+        destination: /konfidencialnost/
+      - type: redirect
+        source: /usloviya
+        destination: /usloviya/
+      - type: redirect
+        source: /licenzii
+        destination: /licenzii/
     headers:
       - path: /*
         name: X-Content-Type-Options
@@ -24,6 +84,22 @@ services:
       - path: /*
         name: X-Frame-Options
         value: SAMEORIGIN
+      # всегда только HTTPS
+      - path: /*
+        name: Strict-Transport-Security
+        value: max-age=31536000; includeSubDomains
+      # сайту не нужны камера, микрофон, геолокация и прочие устройства — запрещаем
+      - path: /*
+        name: Permissions-Policy
+        value: camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()
+      - path: /*
+        name: Cross-Origin-Opener-Policy
+        value: same-origin
+      # Основная политика безопасности (CSP) встроена в каждую страницу метатегом, см. src/layout.mjs.
+      # Здесь — только то, что метатегом задать нельзя: запрет встраивать сайт в чужие фреймы.
+      - path: /*
+        name: Content-Security-Policy
+        value: frame-ancestors 'self'
       # Стили и скрипты подключены с ?v=хеш, поэтому их можно долго кешировать;
       # остальные файлы в /assets/ (картинки-превью, иконки) кешируются на неделю
       - path: /assets/*

@@ -14,10 +14,15 @@
   const formats = new Map();
   const decoders = [];
 
+  // Декодеры с CDN, версии закреплены. integrity (SRI) — браузер откажется запускать файл,
+  // если его содержимое на CDN изменится.
   const CDN = {
-    pako: 'https://cdn.jsdelivr.net/npm/pako@1.0.11/dist/pako_inflate.min.js',
-    utif: 'https://cdn.jsdelivr.net/npm/utif@3.1.0/UTIF.js',
-    heic: 'https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js'
+    pako: { src: 'https://cdn.jsdelivr.net/npm/pako@1.0.11/dist/pako_inflate.min.js',
+      integrity: 'sha384-eVEAceNXm4nXk77ToJFE5Yyd50iOqdwXwefI35sH/rqeSTw99+DhTt4CzWZU+xBz' },
+    utif: { src: 'https://cdn.jsdelivr.net/npm/utif@3.1.0/UTIF.js',
+      integrity: 'sha384-RyBmXHdfZ/Uon+ud+/AqSyWpUWnKYt2tkRG/P4gWoRUGDU+qIAV3tGBPNlYTBZEF' },
+    heic: { src: 'https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js',
+      integrity: 'sha384-OTofQ0MEeiSgh62havBcemCIK0gqj809wX6UA0uPISNMRnR6NZyCdGzX3SbLrgwL' }
   };
 
   const DEFAULTS = {
@@ -73,13 +78,14 @@
   function latin(s) { const a = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) a[i] = s.charCodeAt(i) & 255; return a; }
 
   const scripts = {};
-  function loadScript(src) {
+  function loadScript({ src, integrity }) {
     if (!scripts[src]) {
       scripts[src] = new Promise((resolve, reject) => {
         const s = document.createElement('script');
         s.src = src; s.async = true;
+        s.integrity = integrity; s.crossOrigin = 'anonymous'; s.referrerPolicy = 'no-referrer';
         s.onload = resolve;
-        s.onerror = () => { delete scripts[src]; reject(new Error('Не удалось загрузить декодер (нужен интернет)')); };
+        s.onerror = () => { s.remove(); delete scripts[src]; reject(new Error('Не удалось загрузить декодер (нужен интернет)')); };
         document.head.appendChild(s);
       });
     }

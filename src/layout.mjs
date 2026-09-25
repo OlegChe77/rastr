@@ -24,11 +24,30 @@ export const NAV = [
 
 /* ---------------- <head> ---------------- */
 
+// Политика безопасности контента. Встроена в каждую страницу метатегом, поэтому действует везде,
+// где открыт сайт, и проверяется тестами.
+// 'unsafe-eval' нужен только декодеру HEIC (heic2any собран Emscripten и создаёт функции через new Function
+// в своём Worker). Встроенные скрипты и чужие адреса по-прежнему запрещены.
+export const CSP = [
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-eval' https://cdn.jsdelivr.net/npm/pako@1.0.11/ https://cdn.jsdelivr.net/npm/utif@3.1.0/ https://cdn.jsdelivr.net/npm/heic2any@0.0.4/",
+  "worker-src 'self' blob:",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "font-src https://fonts.gstatic.com",
+  "img-src 'self' data: blob: https://hits.sh",
+  "connect-src 'self' blob: data:",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'"
+].join('; ');
+
 function head(p, site, assets) {
   const url = site.url + p.path;
   const og = site.url + (p.ogImage || '/assets/og/home.png');
   const tags = [
     `<meta charset="utf-8">`,
+    `<meta http-equiv="Content-Security-Policy" content="${CSP}">`,
+    `<meta name="referrer" content="strict-origin-when-cross-origin">`,
     `<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">`,
     `<title>${esc(p.title)}</title>`,
     `<meta name="description" content="${esc(p.description)}">`,
@@ -96,7 +115,12 @@ export function cardTitle(l) {
 }
 const plainCard = l => l.card[1] ? `${l.card[0]} в ${l.card[1]}` : l.card[0];
 
-function footer() {
+function footer(site) {
+  const host = new URL(site.url).host;
+  const key = site.counterKey || host;
+  const counter = site.counter
+    ? `<span class="counter" id="counter" hidden data-host="${esc(host)}" data-src="https://hits.sh/${esc(encodeURIComponent(key))}.svg?view=today-total&amp;label=%D0%9F%D0%BE%D1%81%D0%B5%D1%89%D0%B5%D0%BD%D0%B8%D0%B9&amp;style=flat-square&amp;color=0f1320&amp;labelColor=5e6679"></span>`
+    : '';
   const half = Math.ceil(landings.length / 2);
   const col = (title, items) => `<div class="foot-col"><h2>${title}</h2><ul>${items.map(([href, label]) => `<li><a href="${href}">${esc(label)}</a></li>`).join('')}</ul></div>`;
   const conv = landings.map(l => [`/${l.slug}/`, plainCard(l)]);
@@ -111,7 +135,7 @@ function footer() {
       ${col('Ещё', conv.slice(half))}
       ${col('Сервис', [['/formaty/', 'Форматы изображений'], ['/instrukciya/', 'Инструкция'], ['/konfidencialnost/', 'Конфиденциальность'], ['/usloviya/', 'Условия использования'], ['/licenzii/', 'Лицензии']])}
     </div>
-    <div class="foot-bottom"><span>© 2026 Растр</span><span>Файлы обрабатываются локально, без загрузки на сервер</span></div>
+    <div class="foot-bottom"><span>© 2026 Растр</span>${counter}<span>Файлы обрабатываются локально, без загрузки на сервер</span></div>
   </div>
 </footer>`;
 }
@@ -128,17 +152,16 @@ export function converter() {
         <div class="drop-title">Перетащите изображения сюда</div>
         <p class="drop-sub">Можно сразу несколько. Или вставьте из буфера: Ctrl+V</p>
         <span class="drop-btn">Выбрать файлы</span>
+        <noscript><p class="err">Для работы конвертера включите JavaScript.</p></noscript>
         <div class="drop-formats mono" id="in-list">Принимаем: PNG · JPEG · WEBP · AVIF · GIF · BMP · ICO · SVG · TIFF · HEIC · TGA · PPM/PGM/PBM</div>
       </div>
     </label>
-    <div class="queue">
+    <div class="queue" id="queue" hidden>
       <div class="queue-head">
         <div class="q-title"><h2 id="q-title">Очередь</h2><span class="mono" id="q-summary"></span></div>
         <button class="btn ghost" id="clear" type="button">Очистить</button>
       </div>
       <ul class="list" id="list" aria-labelledby="q-title"></ul>
-      <div class="empty" id="empty" hidden>Очередь пуста. Добавьте файлы выше.</div>
-      <noscript><div class="empty">Для работы конвертера включите JavaScript.</div></noscript>
     </div>
   </div>
   <aside class="settings" aria-label="Настройки конвертации">
@@ -260,7 +283,7 @@ export function render(p, site, assets) {
   const crumbs = p.crumbs ? crumbsHtml(p.crumbs) : '';
   const scripts = p.app
     ? `${APP_TAIL}
-${p.preset ? `<script type="application/json" id="preset">${JSON.stringify(p.preset)}</script>` : ''}
+${p.preset ? `<script type="application/json" id="preset">${JSON.stringify(p.preset).replace(/</g, '\\u003c')}</script>` : ''}
 <script src="${assets['rastr-convert.js']}"></script>
 <script src="${assets['app.js']}"></script>`
     : '';
@@ -275,8 +298,9 @@ ${crumbs}
 <main id="main">
 ${p.body}
 </main>
-${footer()}
+${footer(site)}
 ${scripts}
+${site.counter ? `<script src="${assets['counter.js']}" defer></script>` : ''}
 </body>
 </html>
 `;

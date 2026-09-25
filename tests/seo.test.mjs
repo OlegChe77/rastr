@@ -5,7 +5,8 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import config from '../site.config.mjs';
-import { startServer, launch, ROOT } from './helpers.mjs';
+import { startServer, launch, ROOT, PROJECT, bmp } from './helpers.mjs';
+import { execFileSync } from 'node:child_process';
 import { landings } from '../src/content/landings.mjs';
 
 const SITE = config.url.replace(/\/+$/, '');
@@ -138,6 +139,13 @@ test('внешние ссылки открываются в новой вкла�
   assert.deepEqual(bad, []);
 });
 
+test('render.yaml перенаправляет адреса без слеша на канонические для всех страниц', async () => {
+  const yaml = await fs.readFile(path.join(PROJECT, 'render.yaml'), 'utf8');
+  const routes = [...yaml.matchAll(/source: (\S+)\n\s+destination: (\S+)/g)].map(m => [m[1], m[2]]);
+  const expected = pages.map(p => p.path).filter(p => p !== '/').map(p => [p.slice(0, -1), p]);
+  assert.deepEqual(routes.sort(), expected.sort());
+});
+
 test('robots.txt открывает сайт и указывает на sitemap', async () => {
   const robots = await fs.readFile(path.join(ROOT, 'robots.txt'), 'utf8');
   assert.match(robots, /^User-agent: \*$/m);
@@ -173,13 +181,18 @@ test('страницы лёгкие: HTML до 100 КБ, CSS и JS подклю�
   }
 });
 
+test('на сайте нет дублей текста и вопросов FAQ между страницами', () => {
+  const out = execFileSync(process.execPath, [path.join(PROJECT, 'tools', 'audit-duplicates.mjs')], { encoding: 'utf8' });
+  assert.match(out, /Всего групп дублей: 0/, out);
+});
+
 test('на сайте нет данных владельца', () => {
   const found = [];
   for (const { path: p, html } of pages) for (const re of [/class="fill"/, /[\w.-]+@[\w-]+\.\w{2,}/, /ИНН|ОГРН/, /Контакты/]) if (re.test(html)) found.push(p + ': ' + re);
   assert.deepEqual(found, []);
 });
 
-// Сколько форматов ожидаем увидеть выбранными и какой пример в очереди
+// Какой формат ожидаем увидеть выбранным
 const LABEL = { jpeg: 'JPG', png: 'PNG', webp: 'WEBP', pdf: 'PDF', ico: 'ICO' };
 for (const l of landings) {
   test(`/${l.slug}/ открывает конвертер с настройками страницы`, async () => {
@@ -190,11 +203,11 @@ for (const l of landings) {
     page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
     try {
       await page.goto(server.url + `/${l.slug}/`);
-      await page.locator('.row[data-status="ready"]').first().waitFor();
+      await page.locator('#fmts .fmt').first().waitFor();
       const f = l.preset.format;
       assert.equal(await page.locator(`#fmts .fmt[data-id="${f}"]`).getAttribute('aria-pressed'), 'true');
       assert.equal(await page.locator('#run').innerText(), 'Конвертировать в ' + LABEL[f]);
-      assert.match(await page.locator('.row-name').first().innerText(), new RegExp(l.preset.sample.name.replace('.', '\\.')));
+      assert.equal(await page.locator('.row').count(), 0, 'примеров в очереди нет');
       if (l.preset.quality) assert.equal(await page.locator('#quality').inputValue(), String(Math.round(l.preset.quality * 100)));
       if (l.preset.resize) assert.equal(await page.locator('#resize-mode').inputValue(), l.preset.resize.mode);
       if (l.preset.pdfSingle) assert.ok(await page.locator('#pdf-single').isChecked());
@@ -210,11 +223,12 @@ test('конвертация на странице /heic-v-jpg/ даёт JPG', a
   const page = await context.newPage();
   try {
     await page.goto(server.url + '/heic-v-jpg/');
+    await page.setInputFiles('#file', [{ name: 'снимок.bmp', mimeType: 'image/bmp', buffer: bmp(120, 80, [200, 80, 40]) }]);
     await page.locator('.row[data-status="ready"]').first().waitFor();
     await page.click('#run');
     await page.locator('.row[data-status="done"]').first().waitFor();
     const [dl] = await Promise.all([page.waitForEvent('download'), page.locator('.row').first().getByRole('button', { name: 'Скачать' }).click()]);
-    assert.equal(dl.suggestedFilename(), 'пример-фото.jpg');
+    assert.equal(dl.suggestedFilename(), 'снимок.jpg');
   } finally { await context.close(); }
 });
 

@@ -38,6 +38,7 @@ const converted = async page => {
     const dt = new DataTransfer();
     dt.items.add(new File([await make(1600, 1067, 190)], 'отпуск-море.png', { type: 'image/png' }));
     dt.items.add(new File([await make(1080, 1350, 320)], 'портрет.png', { type: 'image/png' }));
+    dt.items.add(new File([await make(1920, 1280, 30)], 'закат-на-даче.png', { type: 'image/png' }));
     window.dispatchEvent(new DragEvent('drop', { dataTransfer: dt, cancelable: true }));
   });
   await page.waitForFunction(() => document.querySelectorAll('.row[data-status="ready"]').length === 3);

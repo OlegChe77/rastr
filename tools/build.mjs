@@ -38,7 +38,7 @@ async function build() {
   await fs.cp(path.join(SRC, 'assets'), path.join(DIST, 'assets'), { recursive: true });
 
   const assets = {};
-  for (const n of ['site.css', 'app.js', 'rastr-convert.js']) assets[n] = await hashed(n);
+  for (const n of ['site.css', 'app.js', 'rastr-convert.js', 'counter.js']) assets[n] = await hashed(n);
 
   // Браузеры и поисковики ищут эти иконки в корне сайта
   for (const [from, to] of [['img/favicon.ico', 'favicon.ico'], ['img/apple-touch-icon.png', 'apple-touch-icon.png']]) {

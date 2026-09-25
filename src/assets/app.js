@@ -128,11 +128,11 @@
   }));
 
   /* ---------- queue ---------- */
-  async function addFiles(files, sample) {
+  async function addFiles(files) {
     const list = [...files].filter(f => f && f.size);
     if (!list.length) return;
     for (const file of list) {
-      const item = { id: ++seq, file, name: file.name || ('картинка-' + seq + '.png'), size: file.size, status: 'loading', sample: !!sample };
+      const item = { id: ++seq, file, name: file.name || ('картинка-' + seq + '.png'), size: file.size, status: 'loading' };
       state.items.push(item);
       renderRow(item);
     }
@@ -191,8 +191,7 @@
         (item.thumb ? '<img src="' + item.thumb + '" alt="">' : '') + '</button>' +
       '<div style="min-width:0">' +
         '<div class="row-name" title="' + esc(item.name) + '">' + esc(item.name) + '</div>' +
-        '<div class="row-meta"><span class="tag">' + esc(src) + '</span><span class="mono">' + [dims, fmtSize(item.size)].filter(Boolean).join(' · ') + '</span>' +
-          (item.sample ? '<span class="tag sample">пример</span>' : '') + '</div>' +
+        '<div class="row-meta"><span class="tag">' + esc(src) + '</span><span class="mono">' + [dims, fmtSize(item.size)].filter(Boolean).join(' · ') + '</span></div>' +
         '<div class="row-res">' + res + '</div>' +
       '</div>' +
       '<div class="row-actions">' +
@@ -207,7 +206,8 @@
     const done = state.items.filter(i => i.status === 'done');
     $('q-summary').textContent = n ? n + ' ' + plural(n, 'файл', 'файла', 'файлов') + ' · ' + fmtSize(total) +
       (done.length ? ' → ' + fmtSize(done.reduce((s, i) => s + i.result.blob.size, 0)) : '') : '';
-    $('empty').hidden = n > 0;
+    // пустую очередь не показываем: на экране остаётся только зона загрузки
+    $('queue').hidden = n === 0;
     $('clear').hidden = n === 0;
     $('zip').disabled = done.length === 0 || state.busy;
     $('run').disabled = state.busy || !state.items.some(i => i.decoded);
@@ -333,39 +333,6 @@
     if (files.length) { addFiles(files.map((f, i) => new File([f], f.name && f.name !== 'image.png' ? f.name : 'вставка-' + (seq + i + 1) + '.png', { type: f.type }))); toast('Вставлено из буфера'); }
   });
 
-  /* ---------- пример, чтобы инструмент сразу показывал работу ---------- */
-  function drawSample() {
-    const W = 1200, H = 800, c = document.createElement('canvas');
-    c.width = W; c.height = H;
-    const x = c.getContext('2d');
-    x.beginPath(); x.roundRect(40, 40, W - 80, H - 80, 64); x.clip();
-    const sky = x.createLinearGradient(0, 40, 0, H);
-    sky.addColorStop(0, '#0A5F7A'); sky.addColorStop(.55, '#E0708F'); sky.addColorStop(1, '#F6C65B');
-    x.fillStyle = sky; x.fillRect(0, 0, W, H);
-    x.fillStyle = '#FFE7A8'; x.beginPath(); x.arc(W * .66, H * .52, 120, 0, Math.PI * 2); x.fill();
-    const ridge = (y0, amp, col, seed) => {
-      x.fillStyle = col; x.beginPath(); x.moveTo(0, H);
-      for (let i = 0; i <= 24; i++) {
-        x.lineTo(i / 24 * W, y0 - Math.abs(Math.sin(i * 1.7 + seed) * amp) - Math.sin(i * .6 + seed) * amp * .4);
-      }
-      x.lineTo(W, H); x.fill();
-    };
-    ridge(H * .72, 110, '#5B2A4E', 1); ridge(H * .82, 80, '#2E1A36', 3); ridge(H * .93, 50, '#141821', 5);
-    return c;
-  }
-  const SAMPLE_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 400"><defs><linearGradient id="s" x1="0" y1="0" x2="0" y2="1">' +
-    '<stop offset="0" stop-color="#0A5F7A"/><stop offset=".55" stop-color="#E0708F"/><stop offset="1" stop-color="#F6C65B"/></linearGradient></defs>' +
-    '<rect x="20" y="20" width="560" height="360" rx="32" fill="url(#s)"/><circle cx="396" cy="208" r="60" fill="#FFE7A8"/>' +
-    '<path d="M20 300 L120 230 L210 280 L330 200 L450 270 L580 220 V348 a32 32 0 0 1 -32 32 H52 a32 32 0 0 1 -32 -32z" fill="#2E1A36"/></svg>';
-
-  async function sampleFile() {
-    const s = preset.sample || { format: 'png', name: 'закат-пример.png' };
-    if (s.format === 'svg') return new File([SAMPLE_SVG], s.name, { type: 'image/svg+xml' });
-    const f = R.format(s.format);
-    const blob = f && f.supported() ? await R.encode(drawSample(), s.format, { quality: .92 }) : await R.encode(drawSample(), 'png');
-    return new File([blob], s.name, { type: blob.type });
-  }
-
   /* ---------- старт ---------- */
   if (preset.quality) { $('quality').value = Math.round(preset.quality * 100); $('quality-v').textContent = $('quality').value + '%'; }
   if (preset.resize) {
@@ -381,5 +348,4 @@
   if (!start) { try { start = localStorage.getItem('rastr.format'); } catch (e) {} }
   if (!setFormat(start || 'webp', false) && !setFormat(preset.fallback || 'webp', false)) setFormat('png', false);
   updateResizeUI();
-  sampleFile().then(f => addFiles([f], true));
 })();

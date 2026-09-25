@@ -20,7 +20,7 @@ async function openSite(viewport) {
   page.on('pageerror', e => errors.push(e.message));
   page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
   await page.goto(server.url + '/');
-  await page.locator('.row[data-status="ready"]').first().waitFor();
+  await page.locator('#fmts .fmt').first().waitFor();
   return page;
 }
 
@@ -33,37 +33,46 @@ async function download(page, click) {
   return { name: dl.suggestedFilename(), data: await fs.readFile(await dl.path()) };
 }
 
+// Обычная «фотография» для тестов, где нужен один файл
+const photo = () => ({ name: 'фото.bmp', mimeType: 'image/bmp', buffer: bmp(600, 400, [40, 120, 200]) });
+async function addPhoto(page) { await page.setInputFiles('#file', [photo()]); await idle(page); }
+
 const fixtures = () => [
   { name: 'красный.bmp', mimeType: 'image/bmp', buffer: bmp(64, 48, [220, 30, 30]) },
   { name: 'серый.pgm', mimeType: 'image/x-portable-graymap', buffer: Buffer.concat([Buffer.from('P5\n8 8\n255\n'), Buffer.alloc(64, 128)]) },
   { name: 'логотип.svg', mimeType: 'image/svg+xml', buffer: Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 50"><circle cx="25" cy="25" r="20" fill="#c4165a"/></svg>') }
 ];
 
-test('страница открывается с примером и всеми форматами', async () => {
+test('страница открывается чистой: пустая очередь скрыта, примеров нет', async () => {
   const page = await openSite();
   assert.equal(await page.title(), 'Конвертер изображений онлайн: PNG, JPG, WEBP, HEIC | Растр');
   assert.equal(await page.locator('#fmts .fmt').count(), 14);
-  assert.equal(await page.locator('.row').count(), 1);
-  assert.match(await page.locator('.row').innerText(), /закат-пример\.png[\s\S]*1200×800/);
+  assert.equal(await page.locator('.row').count(), 0);
+  assert.equal(await page.locator('#queue').isVisible(), false, 'пустая очередь не показывается');
+  assert.ok(await page.locator('#run').isDisabled(), 'без файлов конвертировать нечего');
+  assert.equal(await page.locator('#plugin').count(), 0, 'блока с кодом для разработчиков нет');
   assert.equal(await page.locator('#run').innerText(), 'Конвертировать в WEBP');
   assert.equal(await page.locator('#ref-body tr').count(), 14);
 });
 
-test('пример конвертируется в PNG и скачивается', async () => {
+test('файл конвертируется в PNG и скачивается', async () => {
   const page = await openSite();
+  await addPhoto(page);
+  assert.ok(await page.locator('#queue').isVisible(), 'с файлом очередь появляется');
   await page.click('#fmts .fmt[data-id="png"]');
   await page.click('#run');
   await idle(page);
   const row = page.locator('.row').first();
   assert.equal(await row.getAttribute('data-status'), 'done');
-  assert.match(await row.innerText(), /PNG\s+1200×800/);
+  assert.match(await row.innerText(), /PNG\s+600×400/);
   const f = await download(page, () => row.getByRole('button', { name: 'Скачать' }).click());
-  assert.equal(f.name, 'закат-пример.png');
+  assert.equal(f.name, 'фото.png');
   assert.deepEqual([...f.data.subarray(0, 4)], [0x89, 0x50, 0x4E, 0x47]);
 });
 
 test('каждый доступный формат конвертируется и скачивается с правильным расширением', async () => {
   const page = await openSite();
+  await addPhoto(page);
   const ids = await page.$$eval('#fmts .fmt:not(:disabled)', b => b.map(x => x.dataset.id));
   assert.ok(ids.length >= 13, 'доступно форматов: ' + ids.length);
   const EXT = { jpeg: 'jpg', datauri: 'txt' };
@@ -74,7 +83,7 @@ test('каждый доступный формат конвертируется 
     const row = page.locator('.row').first();
     assert.equal(await row.getAttribute('data-status'), 'done', id + ': ' + await row.innerText());
     const f = await download(page, () => row.getByRole('button', { name: 'Скачать' }).click());
-    assert.equal(f.name, 'закат-пример.' + (EXT[id] || id), id);
+    assert.equal(f.name, 'фото.' + (EXT[id] || id), id);
     assert.ok(f.data.length > 100, id + ': файл подозрительно маленький');
   }
 });
@@ -83,7 +92,7 @@ test('загрузка нескольких файлов, конвертация
   const page = await openSite();
   await page.setInputFiles('#file', fixtures());
   await idle(page);
-  assert.equal(await page.locator('.row[data-status="ready"]').count(), 4);
+  assert.equal(await page.locator('.row[data-status="ready"]').count(), 3);
   assert.match(await page.locator('.row', { hasText: 'серый.pgm' }).innerText(), /PNM[\s\S]*8×8/);
   assert.match(await page.locator('.row', { hasText: 'логотип.svg' }).innerText(), /SVG[\s\S]*100×50/);
   assert.ok(await page.locator('#zip').isDisabled(), 'ZIP недоступен до конвертации');
@@ -91,11 +100,11 @@ test('загрузка нескольких файлов, конвертация
   await page.click('#fmts .fmt[data-id="jpeg"]');
   await page.click('#run');
   await idle(page);
-  assert.equal(await page.locator('.row[data-status="done"]').count(), 4);
+  assert.equal(await page.locator('.row[data-status="done"]').count(), 3);
 
   const z = await download(page, () => page.click('#zip'));
-  assert.equal(z.name, 'растр-4-файлов.zip');
-  assert.deepEqual(zipEntries(z.data).sort(), ['закат-пример.jpg', 'красный.jpg', 'логотип.jpg', 'серый.jpg'].sort());
+  assert.equal(z.name, 'растр-3-файлов.zip');
+  assert.deepEqual(zipEntries(z.data).sort(), ['красный.jpg', 'логотип.jpg', 'серый.jpg'].sort());
 });
 
 test('битый файл показывает ошибку и не мешает остальным', async () => {
@@ -108,7 +117,7 @@ test('битый файл показывает ошибку и не мешает
   assert.ok(await bad.getByRole('button', { name: 'Скачать' }).isDisabled());
   await page.click('#run');
   await idle(page);
-  assert.equal(await page.locator('.row[data-status="done"]').count(), 2);
+  assert.equal(await page.locator('.row[data-status="done"]').count(), 1);
 });
 
 test('перетаскивание файла в окно добавляет его в очередь', async () => {
@@ -127,14 +136,15 @@ test('перетаскивание файла в окно добавляет е�
 
 test('изменение размера и поворот попадают в результат', async () => {
   const page = await openSite();
+  await addPhoto(page);
   await page.selectOption('#resize-mode', 'width');
-  await page.fill('#resize-w', '600');
-  assert.match(await page.locator('#resize-hint').innerText(), /1200×800 → 600×400/);
+  await page.fill('#resize-w', '300');
+  assert.match(await page.locator('#resize-hint').innerText(), /600×400 → 300×200/);
   await page.click('#rotate button[data-rot="90"]');
   await page.click('#fmts .fmt[data-id="png"]');
   await page.click('#run');
   await idle(page);
-  assert.match(await page.locator('.row').first().innerText(), /PNG\s+400×600/);
+  assert.match(await page.locator('.row').first().innerText(), /PNG\s+200×300/);
 });
 
 test('качество видно только у форматов с потерями, фон — у форматов без прозрачности', async () => {
@@ -163,27 +173,28 @@ test('все картинки собираются в один PDF', async () =>
   await page.click('#fmts .fmt[data-id="pdf"]');
   await page.check('#pdf-single');
   const f = await download(page, () => page.click('#run'));
-  assert.equal(f.name, 'растр-4-стр.pdf');
+  assert.equal(f.name, 'растр-3-стр.pdf');
   const s = f.data.toString('latin1');
   assert.ok(s.startsWith('%PDF-1.4'));
-  assert.equal((s.match(/\/Type \/Page\b/g) || []).length, 4);
+  assert.equal((s.match(/\/Type \/Page\b/g) || []).length, 3);
   await page.locator('#toast.show').waitFor();
-  assert.match(await page.locator('#toast').innerText(), /4 страницы/);
+  assert.match(await page.locator('#toast').innerText(), /3 страницы/);
 });
 
 test('предпросмотр показывает оригинал и результат', async () => {
   const page = await openSite();
+  await addPhoto(page);
   await page.click('#fmts .fmt[data-id="webp"]');
   await page.click('#run');
   await idle(page);
   await page.locator('.row .thumb').first().click();
   const dlg = page.locator('#dlg');
   await dlg.waitFor();
-  assert.match(await page.locator('#dlg-before-cap').innerText(), /PNG[\s\S]*1200×800/);
+  assert.match(await page.locator('#dlg-before-cap').innerText(), /BMP[\s\S]*600×400/);
   assert.match(await page.locator('#dlg-after-cap').innerText(), /WEBP/);
-  assert.ok(await page.locator('#dlg-after img').evaluate(img => img.decode().then(() => img.naturalWidth)) === 1200);
+  assert.ok(await page.locator('#dlg-after img').evaluate(img => img.decode().then(() => img.naturalWidth)) === 600);
   const f = await download(page, () => page.click('#dlg-dl'));
-  assert.equal(f.name, 'закат-пример.webp');
+  assert.equal(f.name, 'фото.webp');
   await page.click('#dlg-close');
   assert.equal(await dlg.isVisible(), false);
 });
@@ -192,13 +203,13 @@ test('удаление строки и очистка очереди', async () 
   const page = await openSite();
   await page.setInputFiles('#file', fixtures().slice(0, 2));
   await idle(page);
-  assert.equal(await page.locator('.row').count(), 3);
-  await page.locator('.row', { hasText: 'красный.bmp' }).getByRole('button', { name: 'Убрать из очереди' }).click();
   assert.equal(await page.locator('.row').count(), 2);
-  assert.match(await page.locator('#q-summary').innerText(), /^2 файла/);
+  await page.locator('.row', { hasText: 'красный.bmp' }).getByRole('button', { name: 'Убрать из очереди' }).click();
+  assert.equal(await page.locator('.row').count(), 1);
+  assert.match(await page.locator('#q-summary').innerText(), /^1 файл /);
   await page.click('#clear');
   assert.equal(await page.locator('.row').count(), 0);
-  assert.ok(await page.locator('#empty').isVisible());
+  assert.equal(await page.locator('#queue').isVisible(), false, 'после очистки очередь снова скрыта');
   assert.ok(await page.locator('#run').isDisabled());
 });
 
@@ -208,7 +219,7 @@ test('клик по строке таблицы выбирает формат, �
   assert.equal(await page.locator('#run').innerText(), 'Конвертировать в TIFF');
   assert.equal(await page.locator('#fmts .fmt[data-id="tiff"]').getAttribute('aria-pressed'), 'true');
   await page.reload();
-  await page.locator('.row').first().waitFor();
+  await page.locator('#fmts .fmt').first().waitFor();
   assert.equal(await page.locator('#run').innerText(), 'Конвертировать в TIFF');
 });
 

@@ -20,7 +20,7 @@ ok(!html.includes('example.com'), 'в страницах нет заглушки
 const landing = await get('/png-v-jpg/');
 ok(landing.status === 200, 'посадочная страница /png-v-jpg/ открывается', 'статус ' + landing.status);
 const noSlash = await get('/png-v-jpg');
-ok([200, 301, 308].includes(noSlash.status), 'адрес без слеша /png-v-jpg работает',
+ok([301, 308].includes(noSlash.status) && /\/png-v-jpg\/$/.test(noSlash.headers.get('location') || ''), 'адрес без слеша /png-v-jpg перенаправляет на /png-v-jpg/ (нет дубля)',
   'статус ' + noSlash.status + (noSlash.headers.get('location') ? ' → ' + noSlash.headers.get('location') : ''));
 
 const missing = await get('/net-takoj-stranicy/');
@@ -37,7 +37,16 @@ ok(robots.includes(`Sitemap: ${base}/sitemap.xml`), 'robots.txt указывае
 
 const js = await get('/assets/app.js');
 ok(js.status === 200 && /javascript/.test(js.headers.get('content-type') || ''), 'скрипт конвертера отдаётся как JavaScript', js.headers.get('content-type'));
-ok(!!home.headers.get('x-content-type-options'), 'заголовки безопасности из render.yaml применились');
+for (const h of ['x-content-type-options', 'x-frame-options', 'referrer-policy', 'strict-transport-security', 'permissions-policy', 'cross-origin-opener-policy']) {
+  ok(!!home.headers.get(h), 'заголовок ' + h, home.headers.get(h) || 'нет');
+}
+ok(/frame-ancestors 'self'/.test(home.headers.get('content-security-policy') || ''), 'CSP-заголовок запрещает чужие фреймы', home.headers.get('content-security-policy'));
+ok(/<meta http-equiv="Content-Security-Policy" content="default-src 'self'/.test(html), 'политика безопасности (CSP) встроена в страницу');
+ok(/id="counter"[^>]*data-host="/.test(html), 'счётчик посещений есть в подвале');
+// главная hits.sh, а не сама картинка: запрос картинки прибавил бы посещение
+const hits = await fetch('https://hits.sh/', { method: 'HEAD' }).catch(() => ({ status: 0 }));
+ok(hits.status === 200, 'сервис счётчика hits.sh отвечает', 'статус ' + hits.status);
+ok(!/закат-пример|class="tag sample"|id="plugin"/.test(html), 'на главной нет примеров');
 
 console.log(failed ? `\nПроблем: ${failed}` : '\nВсё в порядке');
 process.exit(failed ? 1 : 0);

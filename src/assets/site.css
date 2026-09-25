@@ -164,7 +164,9 @@ button { cursor: pointer; }
   box-shadow: var(--shadow-lg); overflow: hidden;
 }
 @media (max-width: 980px) { .app { grid-template-columns: 1fr; } }
-.work { padding: 20px; display: grid; gap: 16px; align-content: start; min-width: 0; }
+/* зона загрузки растягивается на высоту колонки настроек, пока очередь пуста */
+.work { padding: 20px; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.work > .drop { flex: 1 0 auto; }
 @media (min-width: 720px) { .work { padding: 24px; } }
 
 .drop {
@@ -228,13 +230,11 @@ button { cursor: pointer; }
   padding: 2px 7px; border-radius: 6px; background: var(--surface-3); color: var(--ink-2);
 }
 .tag.acc { background: var(--accent-soft); color: var(--accent); }
-.tag.sample { background: transparent; box-shadow: inset 0 0 0 1px var(--line-strong); color: var(--muted); }
 .delta { font-weight: 600; padding: 1px 6px; border-radius: 6px; }
 .delta.down { color: var(--ok); background: var(--ok-soft); }
 .delta.up { color: var(--err); background: var(--err-soft); }
 .err { color: var(--err); }
 .row-actions { display: flex; gap: 6px; align-items: center; }
-.empty { padding: 28px 16px; color: var(--muted); text-align: center; }
 @media (max-width: 560px) {
   .row { grid-template-columns: 52px minmax(0, 1fr); padding: 12px; gap: 12px; }
   .thumb { width: 52px; height: 52px; }
@@ -434,10 +434,7 @@ kbd { box-shadow: inset 0 -2px 0 var(--line-strong); }
 }
 .meta { font-family: var(--f-mono); font-size: 12.5px; color: var(--muted); margin: 0 0 24px; }
 
-/* блок для разработчиков */
-.plugin { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: 24px; align-items: start; }
-@media (max-width: 860px) { .plugin { grid-template-columns: 1fr; } }
-.plugin ul { margin: 12px 0 0; padding-left: 18px; color: var(--muted); display: grid; gap: 4px; }
+/* блоки кода в статьях */
 pre {
   margin: 0; padding: 18px 20px; overflow-x: auto; border-radius: var(--r-lg); background: #0F1320; color: #E7EAF1;
   font: 13px/1.65 var(--f-mono); border: 1px solid var(--line);
@@ -468,3 +465,7 @@ pre .s { color: #7FD8F0; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }
+
+/* счётчик посещений в подвале */
+.counter { display: inline-flex; align-items: center; }
+.counter img { display: block; height: 20px; width: auto; border-radius: 4px; }

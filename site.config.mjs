@@ -10,5 +10,11 @@ export default {
   // Коды подтверждения из Яндекс Вебмастера и Google Search Console (только значение content="…").
   // Пустая строка — метатег не выводится.
   yandexVerification: '',
-  googleVerification: ''
+  googleVerification: '',
+
+  // Счётчик посещений в подвале (hits.sh — без cookies и регистрации). false — выключить.
+  counter: true,
+  // Под каким именем hits.sh хранит счёт. По умолчанию — домен сайта. Если переедете на свой
+  // домен и хотите сохранить накопленные цифры, впишите сюда старое имя: 'rastr.onrender.com'.
+  counterKey: ''
 };

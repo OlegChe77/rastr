@@ -152,12 +152,14 @@ test('файлы подтверждения Вебмастера лежат в �
   const src = path.join(PROJECT, 'src', 'static');
   const files = (await fs.readdir(src)).filter(f => VERIFY.test(f));
   assert.ok(files.includes('yandex_f51701b5f568b23c.html'), 'нет файла Яндекс Вебмастера');
+  assert.ok(files.includes('google291190cc8008230c.html'), 'нет файла Google Search Console');
   for (const f of files) {
     assert.equal(await fs.readFile(path.join(ROOT, f), 'utf8'), await fs.readFile(path.join(src, f), 'utf8'), f);
     const res = await fetch(server.url + '/' + f);
     assert.equal(res.status, 200, f);
   }
   assert.match(await fs.readFile(path.join(ROOT, 'yandex_f51701b5f568b23c.html'), 'utf8'), /Verification: f51701b5f568b23c/);
+  assert.match(await fs.readFile(path.join(ROOT, 'google291190cc8008230c.html'), 'utf8'), /google-site-verification: google291190cc8008230c\.html/);
 });
 
 test('robots.txt открывает сайт и указывает на sitemap', async () => {

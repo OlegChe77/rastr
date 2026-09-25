@@ -28,7 +28,7 @@ const missingHtml = await missing.text();
 ok(missing.status === 404, 'несуществующий адрес отдаёт статус 404', 'статус ' + missing.status);
 ok(missingHtml.includes('Такой страницы нет'), 'показывается своя страница 404');
 
-for (const [p, type] of [['/sitemap.xml', 'xml'], ['/robots.txt', 'text/plain'], ['/favicon.ico', 'icon'], ['/site.webmanifest', ''], ['/assets/og/home.png', 'image/png']]) {
+for (const [p, type] of [['/sitemap.xml', 'xml'], ['/robots.txt', 'text/plain'], ['/favicon.ico', 'icon'], ['/site.webmanifest', 'manifest+json'], ['/assets/og/home.png', 'image/png']]) {
   const r = await get(p);
   ok(r.status === 200 && (r.headers.get('content-type') || '').includes(type), p + ' доступен', `${r.status} ${r.headers.get('content-type')}`);
 }

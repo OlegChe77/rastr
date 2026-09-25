@@ -1,0 +1,31 @@
+# Настройки Render (Blueprint). Render читает этот файл при создании сайта через
+# New → Blueprint и при каждом деплое. Документация: https://render.com/docs/blueprint-spec
+services:
+  - name: rastr
+    type: web
+    runtime: static
+    branch: main
+    autoDeployTrigger: commit
+    # Сборка: ставим зависимости по package-lock.json и собираем сайт в dist/
+    buildCommand: npm ci && npm run build
+    staticPublishPath: ./dist
+    envVars:
+      # Адрес сайта для canonical, sitemap.xml и превью. Render спросит его при создании.
+      # Пока своего домена нет, укажите адрес вида https://rastr.onrender.com
+      - key: SITE_URL
+        sync: false
+    headers:
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: Referrer-Policy
+        value: strict-origin-when-cross-origin
+      - path: /*
+        name: X-Frame-Options
+        value: SAMEORIGIN
+      # Стили и скрипты подключены с ?v=хеш, поэтому их можно долго кешировать;
+      # остальные файлы в /assets/ (картинки-превью, иконки) кешируются на неделю
+      - path: /assets/*
+        name: Cache-Control
+        value: public, max-age=604800

@@ -1,0 +1,20 @@
+{
+  "name": "rastr",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Растр — конвертер изображений в браузере и плагин rastr-convert.js",
+  "type": "module",
+  "scripts": {
+    "build": "node tools/build.mjs",
+    "icons": "node tools/icons.mjs",
+    "start": "npm run build && python -m http.server 5173 --directory dist",
+    "test": "npm run build && node --test --test-concurrency=1 \"tests/*.test.mjs\"",
+    "test:unit": "npm run build && node --test tests/unit.test.mjs",
+    "test:site": "npm run build && node --test tests/site.test.mjs",
+    "test:seo": "npm run build && node --test tests/seo.test.mjs",
+    "check:live": "node tools/check-live.mjs"
+  },
+  "devDependencies": {
+    "playwright-core": "^1.55.0"
+  }
+}

@@ -1,0 +1,3 @@
+node_modules/
+# dist/ собирается заново на Render при каждом деплое
+dist/

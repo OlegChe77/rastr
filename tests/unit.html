@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Растр — тесты плагина</title>
+<style>
+:root { color-scheme: light dark; --bg: #ECEEF2; --ink: #141821; --muted: #5B6373; --line: #D6DAE2; --ok: #1B7A44; --err: #B8332A; --skip: #9A6B00; }
+@media (prefers-color-scheme: dark) { :root { --bg: #0E1015; --ink: #E9EBF0; --muted: #9AA2B2; --line: #2A2F3A; --ok: #4CC47F; --err: #FF7468; --skip: #F0C24A; } }
+body { margin: 0; padding: 24px 16px; background: var(--bg); color: var(--ink); font: 14px/1.5 system-ui, 'Segoe UI', sans-serif; }
+main { max-width: 900px; margin: 0 auto; }
+h1 { font-size: 20px; margin: 0 0 4px; }
+#sum { font-family: ui-monospace, Consolas, monospace; margin-bottom: 16px; color: var(--muted); }
+ol { list-style: none; padding: 0; margin: 0; border-top: 1px solid var(--line); }
+li { padding: 6px 0; border-bottom: 1px solid var(--line); display: grid; grid-template-columns: 56px 1fr auto; gap: 10px; }
+.st { font: 600 12px ui-monospace, Consolas, monospace; }
+.pass .st { color: var(--ok); } .fail .st { color: var(--err); } .skip .st { color: var(--skip); }
+.ms { color: var(--muted); font: 12px ui-monospace, Consolas, monospace; }
+.err { grid-column: 2 / -1; color: var(--err); font: 12px ui-monospace, Consolas, monospace; white-space: pre-wrap; }
+.skip .err { color: var(--skip); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Тесты плагина rastr-convert.js</h1>
+  <div id="sum">Запуск…</div>
+  <ol id="out"></ol>
+</main>
+<script src="/assets/rastr-convert.js"></script>
+<script src="unit.js"></script>
+<script>
+  const out = document.getElementById('out'), sum = document.getElementById('sum');
+  const LABEL = { pass: 'OK', fail: 'FAIL', skip: 'SKIP' };
+  window.addEventListener('rastr-test', e => {
+    const r = e.detail, li = document.createElement('li');
+    li.className = r.status;
+    li.innerHTML = '<span class="st"></span><span class="nm"></span><span class="ms"></span>' + (r.error ? '<span class="err"></span>' : '');
+    li.querySelector('.st').textContent = LABEL[r.status];
+    li.querySelector('.nm').textContent = r.name;
+    li.querySelector('.ms').textContent = r.ms + ' мс';
+    if (r.error) li.querySelector('.err').textContent = r.error;
+    out.appendChild(li);
+  });
+  const filter = new URLSearchParams(location.search).get('grep') || '';
+  window.__done = RastrTests.run(filter).then(results => {
+    const c = s => results.filter(r => r.status === s).length;
+    sum.textContent = 'Пройдено: ' + c('pass') + ' · упало: ' + c('fail') + ' · пропущено: ' + c('skip') + ' · всего: ' + results.length;
+    document.title = (c('fail') ? '✗ ' : '✓ ') + document.title;
+    return results;
+  });
+</script>
+</body>
+</html>

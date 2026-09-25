@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 64" role="img" aria-label="Растр">
+  <rect width="64" height="64" rx="16" fill="#0F1320"/>
+  <circle cx="25" cy="26" r="13" fill="#1FB8E0"/>
+  <circle cx="39" cy="26" r="13" fill="#FF3D8B" style="mix-blend-mode:screen"/>
+  <circle cx="32" cy="38" r="13" fill="#FFC23D" style="mix-blend-mode:screen"/>
+  <text x="80" y="44" font-family="Unbounded, 'Arial Black', sans-serif" font-weight="800" font-size="34" letter-spacing="-1" fill="#0F1320">Растр</text>
+</svg>

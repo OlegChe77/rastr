@@ -1,89 +1,145 @@
-# Растр — конвертер изображений
+<p align="center">
+  <img src="src/assets/favicon.svg" width="88" height="88" alt="Логотип Растра">
+</p>
 
-Сайт-конвертер изображений, который работает в браузере, и плагин `rastr-convert.js`.
+<h1 align="center">Растр — конвертер изображений</h1>
 
-## Что куда
+<p align="center">
+  Бесплатный онлайн-конвертер картинок между 14 форматами.<br>
+  Всё работает прямо в браузере — файлы не загружаются на сервер.
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/home.png" alt="Главная страница Растра" width="900">
+</p>
+
+## Возможности
+
+- **14 форматов на выход:** PNG, JPG, WEBP, AVIF, GIF, BMP, ICO, TIFF, TGA, PDF, SVG, PPM, PGM, Base64.
+- **12 форматов на вход:** PNG, JPEG, WEBP, AVIF, GIF, BMP, ICO, SVG, TIFF, HEIC (фото с iPhone), TGA, PPM/PGM/PBM.
+- **Пакетная обработка:** сотни файлов за раз, результат одним ZIP-архивом.
+- **Настройки:** качество, фон вместо прозрачности, размер (в процентах, по ширине/высоте, в рамку), поворот и отражение, палитра GIF, размеры внутри ICO.
+- **PDF из картинок:** собрать сканы и фото в один многостраничный документ.
+- **Сравнение «до/после»** и экономия веса по каждому файлу.
+- **Приватность:** конвертация на устройстве пользователя, без регистрации, cookies и аналитики.
+- **Светлая и тёмная тема**, адаптивная вёрстка для телефонов.
+
+<p align="center">
+  <img src="docs/screenshots/converter.png" alt="Конвертер: три файла переведены в WEBP, вес уменьшился на 85–99%" width="900">
+</p>
+
+<table>
+  <tr>
+    <td width="62%"><img src="docs/screenshots/dark.png" alt="Тёмная тема"></td>
+    <td width="38%"><img src="docs/screenshots/mobile.png" alt="Версия для телефона"></td>
+  </tr>
+  <tr>
+    <td align="center">Тёмная тема</td>
+    <td align="center">На телефоне</td>
+  </tr>
+</table>
+
+## Страницы под поиск
+
+Кроме главной, у сайта 14 посадочных страниц под частые запросы. На каждой свой текст, вопросы и ответы, а конвертер открывается уже настроенным под задачу.
+
+<p align="center">
+  <img src="docs/screenshots/popular.png" alt="Блок популярных конвертеров" width="900">
+</p>
+
+| Страница | Главный запрос |
+|---|---|
+| `/` | конвертер изображений |
+| `/png-v-jpg/` | png в jpg |
+| `/jpg-v-png/` | jpg в png |
+| `/heic-v-jpg/` | heic в jpg |
+| `/webp-v-jpg/` | webp в jpg |
+| `/webp-v-png/` | webp в png |
+| `/jpg-v-webp/` | jpg в webp |
+| `/png-v-webp/` | png в webp |
+| `/avif-v-jpg/` | avif в jpg |
+| `/jpg-v-pdf/` | jpg в pdf |
+| `/png-v-ico/` | png в ico, создать favicon |
+| `/svg-v-png/` | svg в png |
+| `/tiff-v-jpg/` | tiff в jpg |
+| `/szhat-foto/` | сжать фото |
+| `/izmenit-razmer-foto/` | изменить размер фото |
+| `/formaty/` | форматы изображений |
+
+<p align="center">
+  <img src="docs/screenshots/landing-heic.png" alt="Страница «Конвертер HEIC в JPG онлайн»" width="900">
+</p>
+
+**Что настроено для SEO:** статический HTML без необходимости выполнять JavaScript, понятные адреса, уникальные `title` / `description` / `H1`, `canonical`, Open Graph с отдельной картинкой-превью для каждой страницы, разметка schema.org (`WebApplication`, `FAQPage`, `BreadcrumbList`, `WebSite`, `Article`), хлебные крошки, перелинковка без страниц-сирот, `sitemap.xml`, `robots.txt`, страница 404 со статусом 404 и `noindex`, favicon и манифест. Всё это проверяется автотестами.
+
+## Как устроен проект
 
 | Папка / файл | Что это |
 |---|---|
-| `dist/` | **Готовый сайт.** Именно эту папку загружают на хостинг |
+| `src/assets/rastr-convert.js` | Плагин конвертации без зависимостей: кодировщики GIF, BMP, ICO, TIFF, TGA, PDF, ZIP и др. |
+| `src/assets/app.js`, `site.css` | Интерфейс конвертера и стили |
+| `src/content/landings.mjs` | Тексты и настройки посадочных страниц |
+| `src/content/formats.mjs` | Справочник форматов |
+| `src/pages.mjs`, `src/layout.mjs` | Страницы, шаблон, метатеги и разметка |
+| `tools/build.mjs` | Сборка сайта в `dist/`, sitemap, robots, манифест |
+| `tools/icons.mjs`, `tools/screenshots.mjs` | Иконки, превью для соцсетей и скриншоты для README |
+| `tools/check-live.mjs` | Проверка опубликованного сайта |
+| `tests/` | Модульные, сквозные и SEO-тесты |
+| `render.yaml` | Настройки публикации на Render |
 | `site.config.mjs` | Адрес сайта и коды Яндекс Вебмастера / Google Search Console |
-| `src/content/landings.mjs` | Тексты и настройки 14 SEO-страниц (PNG в JPG, HEIC в JPG…) |
-| `src/content/formats.mjs` | Тексты справочника форматов |
-| `src/pages.mjs` | Главная, инструкция, документы, 404 |
-| `src/layout.mjs` | Шапка, подвал, метатеги, разметка schema.org |
-| `src/assets/` | Стили, скрипты, логотип, иконки, превью для соцсетей |
-| `tools/` | Сборка сайта и генерация иконок |
-| `tests/` | Автотесты |
 
-## Команды
+## Запуск на своём компьютере
+
+Нужны Node.js 24 и Python (для локального сервера).
 
 ```bash
-npm install        # один раз
-npm run build      # собрать сайт в dist/
+npm install
 npm start          # собрать и открыть на http://localhost:5173
-npm test           # собрать и прогнать все тесты
-npm run icons      # перерисовать иконки и превью после смены логотипа
 ```
 
-## Публикация на Render через GitHub
+Другие команды:
 
-Сайт статический, поэтому на Render он размещается бесплатно как **Static Site**. Все настройки уже лежат в `render.yaml`.
+```bash
+npm run build      # собрать сайт в dist/
+npm test           # собрать и прогнать все тесты (нужен Chrome или Edge)
+npm run icons      # перерисовать иконки и превью после смены логотипа
+npm run screenshots # переснять скриншоты для README
+```
 
-1. Создайте пустой репозиторий на github.com и отправьте туда проект (`git push`). Папки `dist/` и `node_modules/` в репозиторий не попадают — Render собирает сайт сам.
-2. На dashboard.render.com: **New → Blueprint**, подключите GitHub и выберите репозиторий. Render прочитает `render.yaml`.
-3. Render попросит значение `SITE_URL`. Впишите будущий адрес, например `https://rastr.onrender.com` (имя сервиса — `rastr`; если оно занято, Render покажет другой адрес — тогда исправьте `SITE_URL` в Environment и нажмите Manual Deploy).
-4. После деплоя проверьте живой сайт: `npm run check:live -- https://rastr.onrender.com`.
-5. Дальше каждый `git push` в ветку `main` публикуется автоматически.
+## Публикация на Render
 
-Свой домен: Settings → Custom Domains, затем поменяйте `SITE_URL` на новый адрес и передеплойте.
+Сайт статический, поэтому на Render он размещается бесплатно как **Static Site**. Все настройки лежат в `render.yaml`.
 
-## Запуск на другом хостинге
+1. На [dashboard.render.com](https://dashboard.render.com): **New → Blueprint**, подключите GitHub и выберите этот репозиторий.
+2. Render спросит `SITE_URL` — впишите будущий адрес, например `https://rastr.onrender.com`. Если Render выдаст другой адрес, исправьте переменную в Environment и нажмите Manual Deploy.
+3. После деплоя проверьте живой сайт:
+   ```bash
+   npm run check:live -- https://rastr.onrender.com
+   ```
+4. Дальше каждый `git push` в `main` публикуется автоматически.
 
-1. В `site.config.mjs` впишите адрес сайта: `url: 'https://ваш-домен.ru'`.
-2. `npm run build`.
-3. Загрузите содержимое `dist/` на хостинг (подойдёт любой статический: Netlify, GitHub Pages, Cloudflare Pages, обычный хостинг с nginx/Apache). Страница `404.html` должна отдаваться для несуществующих адресов — Netlify и GitHub Pages делают это сами.
-4. Подключите HTTPS (на всех перечисленных хостингах — бесплатно).
+Свой домен: Settings → Custom Domains, затем поменяйте `SITE_URL` на новый адрес.
 
 ## Индексация
 
-1. **Яндекс Вебмастер** (webmaster.yandex.ru): добавьте сайт, выберите подтверждение метатегом, вставьте код в `yandexVerification` в `site.config.mjs`, соберите и загрузите сайт. Затем «Индексирование → Файлы Sitemap» → добавьте `https://ваш-домен.ru/sitemap.xml`. В «Переобход страниц» можно отправить все 20 адресов.
-2. **Google Search Console** (search.google.com/search-console): так же, код — в `googleVerification`. «Файлы Sitemap» → `sitemap.xml`. «Проверка URL» → «Запросить индексирование» для главной и ключевых страниц.
-3. Через 1–2 недели проверьте в обоих сервисах отчёты об ошибках индексации.
+1. **Яндекс Вебмастер:** добавьте сайт, подтвердите метатегом (код — в `yandexVerification` в `site.config.mjs`), добавьте `sitemap.xml`.
+2. **Google Search Console:** то же самое, код — в `googleVerification`.
 
-## Что уже настроено для SEO
+## Плагин для своего сайта
 
-- Статический HTML: поисковикам не нужно выполнять JavaScript, чтобы увидеть текст.
-- Понятные адреса: `/png-v-jpg/`, `/heic-v-jpg/`, `/szhat-foto/`.
-- Уникальные `title`, `description`, `keywords`, один `H1` с главным запросом на каждой странице.
-- `canonical`, `robots`, Open Graph и превью-картинки 1200×630 для каждой страницы.
-- Разметка schema.org: `WebApplication`, `FAQPage`, `BreadcrumbList`, `WebSite`, `Article`.
-- Видимые хлебные крошки, перелинковка между всеми страницами, нет страниц-сирот.
-- `sitemap.xml`, `robots.txt`, `404.html` со статусом 404 и `noindex`.
-- favicon.ico, SVG-иконка, apple-touch-icon, манифест.
-- Лёгкие страницы, версии у CSS/JS для кеша, адаптивная вёрстка без горизонтальной прокрутки.
+```html
+<script src="rastr-convert.js"></script>
+<script>
+  const res = await RastrConvert.convert(file, 'webp', {
+    quality: 0.8,
+    resize: { mode: 'width', width: 1200 }
+  });
+  // res.blob — готовый файл, res.name — «photo.webp»
+</script>
+```
 
-Всё это проверяется в `tests/seo.test.mjs` при каждом `npm test`.
+Также доступны `formats()`, `decode()`, `encode()`, `zip()`, `pdfFromCanvases()` и `register()` для своих форматов.
 
-## Карта ключевых запросов
+## Лицензии сторонних компонентов
 
-| Страница | Главный запрос | Дополнительные |
-|---|---|---|
-| `/` | конвертер изображений | конвертер картинок онлайн, изменить формат фото |
-| `/png-v-jpg/` | png в jpg | png в jpeg, перевести png в jpg онлайн |
-| `/jpg-v-png/` | jpg в png | jpeg в png, фото в png |
-| `/heic-v-jpg/` | heic в jpg | чем открыть heic, фото с айфона в jpg |
-| `/webp-v-jpg/` | webp в jpg | как открыть webp, webp в jpeg |
-| `/webp-v-png/` | webp в png | webp в png с прозрачностью |
-| `/jpg-v-webp/` | jpg в webp | webp для сайта, оптимизация изображений |
-| `/png-v-webp/` | png в webp | оптимизировать png для сайта |
-| `/avif-v-jpg/` | avif в jpg | как открыть avif, avif в png |
-| `/jpg-v-pdf/` | jpg в pdf | картинки в pdf, объединить фото в pdf |
-| `/png-v-ico/` | png в ico | создать favicon, favicon онлайн |
-| `/svg-v-png/` | svg в png | svg в jpg, растрировать svg |
-| `/tiff-v-jpg/` | tiff в jpg | tif в jpg, чем открыть tiff |
-| `/szhat-foto/` | сжать фото | уменьшить вес фото, сжать jpg |
-| `/izmenit-razmer-foto/` | изменить размер фото | ресайз фото, уменьшить картинку в пикселях |
-| `/formaty/` | форматы изображений | чем отличается png от jpg, что такое heic |
-
-Новую страницу добавляют одним объектом в `src/content/landings.mjs` — шаблон, sitemap, меню в подвале и превью соберутся сами (для превью запустите `npm run icons`).
+Модули чтения TIFF (UTIF.js, pako) и HEIC (heic2any, libheif) загружаются с jsDelivr только при открытии таких файлов. Шрифты Unbounded, Onest и JetBrains Mono — SIL Open Font License 1.1. Подробности — на странице `/licenzii/`.

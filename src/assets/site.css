@@ -116,7 +116,8 @@ button { cursor: pointer; }
   .logo b { font-size: 18px; }
   .logo svg { width: 30px; height: 30px; }
 }
-@media (max-width: 380px) { .menu a.hide-xs { display: none; } }
+/* на узких экранах «Инструкция» не помещается в шапку; она остаётся в подвале */
+@media (max-width: 480px) { .menu a.hide-xs { display: none; } }
 
 /* ================= хлебные крошки ================= */
 .crumbs { padding-top: 18px; font-size: 13.5px; color: var(--muted); }

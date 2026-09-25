@@ -12,7 +12,8 @@
     "test:unit": "npm run build && node --test tests/unit.test.mjs",
     "test:site": "npm run build && node --test tests/site.test.mjs",
     "test:seo": "npm run build && node --test tests/seo.test.mjs",
-    "check:live": "node tools/check-live.mjs"
+    "check:live": "node tools/check-live.mjs",
+    "screenshots": "npm run build && node tools/screenshots.mjs"
   },
   "devDependencies": {
     "playwright-core": "^1.55.0"

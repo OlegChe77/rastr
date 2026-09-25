@@ -228,6 +228,11 @@ for (const width of [360, 1280]) {
         await page.goto(server.url + p);
         const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
         if (overflow > 0) wide.push(`${p}: +${overflow}px`);
+        // элементы, которые не видны целиком, даже если страница не прокручивается (например, обрезанное меню)
+        const cut = await page.evaluate(() => [...document.querySelectorAll('header a, header b, main h1, main .btn, main a')]
+          .filter(e => { const r = e.getBoundingClientRect(); return r.width && r.right > window.innerWidth + 1 && !e.closest('.table-wrap, pre'); })
+          .map(e => e.textContent.trim().slice(0, 30)));
+        if (cut.length) wide.push(`${p}: обрезано ${cut.join(', ')}`);
       }
     } finally { await context.close(); }
     assert.deepEqual(wide, []);

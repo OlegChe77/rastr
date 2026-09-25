@@ -2,7 +2,7 @@
 import { test, before, after, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
-import { startServer, launch, bmp, zipEntries } from './helpers.mjs';
+import { startServer, launch, bmp, noisyBmp, zipEntries } from './helpers.mjs';
 
 let server, browser, context, errors;
 
@@ -149,7 +149,8 @@ test('изменение размера и поворот попадают в р
 
 test('качество видно только у форматов с потерями, фон — у форматов без прозрачности', async () => {
   const page = await openSite();
-  const visible = sel => page.locator(sel).isVisible();
+  // у «качества» два блока (ползунок и сжатие до размера) — достаточно проверить первый
+  const visible = sel => page.locator(sel).first().isVisible();
   await page.click('#fmts .fmt[data-id="png"]');
   assert.equal(await visible('[data-opt="quality"]'), false);
   assert.equal(await visible('[data-opt="background"]'), false);
@@ -164,6 +165,31 @@ test('качество видно только у форматов с потер
   await page.click('#fmts .fmt[data-id="jpeg"]');
   await page.fill('#quality', '40');
   assert.equal(await page.locator('#quality-v').innerText(), '40%');
+});
+
+test('сжатие до 200 КБ: тяжёлое фото укладывается в лимит и скачивается', async () => {
+  context = await browser.newContext({ acceptDownloads: true });
+  const page = await context.newPage();
+  errors = [];
+  page.on('pageerror', e => errors.push(e.message));
+  await page.goto(server.url + '/szhat-foto-do-kb/');
+  await page.setInputFiles('#file', [{ name: 'большое.bmp', mimeType: 'image/bmp', buffer: noisyBmp(1600, 1200) }]);
+  await idle(page);
+  await page.click('#run');
+  await page.locator('.row[data-status="done"]').waitFor({ timeout: 60000 });
+  const row = page.locator('.row').first();
+  assert.match(await row.innerText(), /≤ 200 КБ · качество \d+%/);
+  const f = await download(page, () => row.getByRole('button', { name: 'Скачать' }).click());
+  assert.equal(f.name, 'большое.jpg');
+  assert.ok(f.data.length <= 200000, 'вес ' + f.data.length + ' байт');
+  assert.ok(f.data.length > 120000, 'не пережато: ' + f.data.length + ' байт');
+
+  // кнопка «1 МБ» меняет лимит, выключенная галочка возвращает ручное качество
+  await page.click('#target-chips button[data-kb="1000"]');
+  assert.equal(await page.locator('#target-kb').inputValue(), '1000');
+  await page.uncheck('#target-on');
+  assert.equal(await page.locator('#quality').isDisabled(), false);
+  assert.match(await page.locator('#quality-v').innerText(), /^\d+%$/);
 });
 
 test('все картинки собираются в один PDF', async () => {

@@ -174,6 +174,19 @@ export function converter() {
       <div class="sec-head"><label class="label" for="quality">Качество</label><span class="qv" id="quality-v">85%</span></div>
       <input type="range" id="quality" min="10" max="100" value="85">
     </div>
+    <div class="sec" data-opt="quality">
+      <label class="check"><input type="checkbox" id="target-on"> Сжать до размера файла</label>
+      <div class="target" id="target-fields" hidden>
+        <div class="inline" style="flex-wrap:nowrap">
+          <input type="number" id="target-kb" min="5" max="51200" step="1" value="200" aria-label="Максимальный размер файла, КБ">
+          <span class="mono target-unit">КБ</span>
+        </div>
+        <div class="target-chips" id="target-chips" role="group" aria-label="Популярные размеры">
+          <button type="button" data-kb="100">100 КБ</button><button type="button" data-kb="200">200 КБ</button><button type="button" data-kb="300">300 КБ</button><button type="button" data-kb="500">500 КБ</button><button type="button" data-kb="1000">1 МБ</button><button type="button" data-kb="2000">2 МБ</button>
+        </div>
+        <p class="hint">Качество подберётся само. Если не хватит — картинка немного уменьшится в пикселях.</p>
+      </div>
+    </div>
     <div class="sec" data-opt="background">
       <div class="sec-head"><span class="label">Фон вместо прозрачности</span></div>
       <div class="inline" style="flex-wrap:nowrap">

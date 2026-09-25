@@ -61,6 +61,14 @@ export function bmp(w, h, [r, g, b]) {
   return buf;
 }
 
+// BMP со случайным шумом: сжимается так же плохо, как настоящее фото
+export function noisyBmp(w, h, seed = 1) {
+  const buf = bmp(w, h, [0, 0, 0]);
+  let s = seed;
+  for (let i = 54; i < buf.length; i++) { s = (s * 1103515245 + 12345) & 0x7fffffff; buf[i] = s >> 16 & 255; }
+  return buf;
+}
+
 export function zipEntries(buf) {
   const end = buf.length - 22;
   if (buf.readUInt32LE(end) !== 0x06054b50) throw new Error('не ZIP');

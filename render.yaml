@@ -57,6 +57,9 @@ services:
         source: /szhat-foto
         destination: /szhat-foto/
       - type: redirect
+        source: /szhat-foto-do-kb
+        destination: /szhat-foto-do-kb/
+      - type: redirect
         source: /izmenit-razmer-foto
         destination: /izmenit-razmer-foto/
       - type: redirect

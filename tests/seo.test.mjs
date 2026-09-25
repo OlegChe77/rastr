@@ -227,6 +227,11 @@ for (const l of landings) {
       if (l.preset.quality) assert.equal(await page.locator('#quality').inputValue(), String(Math.round(l.preset.quality * 100)));
       if (l.preset.resize) assert.equal(await page.locator('#resize-mode').inputValue(), l.preset.resize.mode);
       if (l.preset.pdfSingle) assert.ok(await page.locator('#pdf-single').isChecked());
+      if (l.preset.targetKB) {
+        assert.ok(await page.locator('#target-on').isChecked(), 'сжатие до размера включено');
+        assert.equal(await page.locator('#target-kb').inputValue(), String(l.preset.targetKB));
+        assert.equal(await page.locator('#quality-v').innerText(), 'авто');
+      }
       // выбор на тематической странице не должен менять формат на главной
       assert.equal(await page.evaluate(() => localStorage.getItem('rastr.format')), null);
       assert.deepEqual(errors, []);

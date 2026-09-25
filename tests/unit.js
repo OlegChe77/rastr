@@ -463,6 +463,71 @@
     eq(pixelAt(d, 0, 0), [255, 0, 0, 255]); eq(pixelAt(d, 1, 0), [0, 255, 0, 255]);
   }, { network: true });
 
+  /* ================= сжатие до заданного веса ================= */
+
+  // «Шумная» картинка, которая плохо сжимается, — как настоящее фото
+  function noisy(w, h) {
+    const f = fixture(w, h), x = f.source.getContext('2d'), img = x.createImageData(w, h);
+    let s = 7;
+    for (let i = 0; i < img.data.length; i += 4) {
+      s = (s * 1103515245 + 12345) & 0x7fffffff;
+      const v = s & 255;
+      img.data[i] = v; img.data[i + 1] = (v * 3 + (i >> 8)) & 255; img.data[i + 2] = (v ^ (i >> 4)) & 255; img.data[i + 3] = 255;
+    }
+    x.putImageData(img, 0, 0);
+    return f.source;
+  }
+
+  test('сжатие до N КБ: JPEG укладывается в лимит, качество подбирается', async () => {
+    const c = noisy(800, 600);
+    const full = await R.encode(c, 'jpeg', { quality: 0.92 });
+    const limit = Math.round(full.size * 0.4);
+    const r = await R.encodeToSize(c, 'jpeg', limit, {});
+    ok(r.reached, 'лимит достигнут');
+    ok(r.blob.size <= limit, `размер ${r.blob.size} > ${limit}`);
+    ok(r.quality >= 0.5 && r.quality < 0.92, 'качество ' + r.quality);
+    eq([r.width, r.height], [800, 600], 'разрешение не трогали, хватило качества');
+    ok(r.blob.size > limit * 0.6, 'файл не пережат слишком сильно: ' + r.blob.size);
+  });
+
+  test('сжатие до N КБ: если файл уже меньше лимита — максимальное качество', async () => {
+    const r = await R.encodeToSize(fixture(40, 30).source, 'jpeg', 500000, {});
+    ok(r.reached); eq(r.quality, 0.92); eq(r.scaled, false);
+  });
+
+  test('сжатие до N КБ: при жёстком лимите уменьшается разрешение', async () => {
+    const r = await R.encodeToSize(noisy(1200, 900), 'jpeg', 15000, {});
+    ok(r.reached, 'лимит достигнут');
+    ok(r.blob.size <= 15000, 'размер ' + r.blob.size);
+    ok(r.scaled && r.width < 1200, 'картинка уменьшена: ' + r.width + '×' + r.height);
+    near([r.width / r.height], [1200 / 900], 0.02, 'пропорции сохранены');
+    const d = await R.decode(new File([r.blob], 'x.jpg'));
+    eq([d.width, d.height], [r.width, r.height], 'размеры в файле совпадают с отчётом');
+  });
+
+  test('сжатие до N КБ: работает для WEBP и PDF', async () => {
+    const c = noisy(600, 400);
+    for (const id of ['webp', 'pdf']) {
+      if (!supported(id)) continue;
+      const limit = Math.round((await R.encode(c, id, { quality: 0.92 })).size * 0.5);
+      const r = await R.encodeToSize(c, id, limit, {});
+      ok(r.reached && r.blob.size <= limit, `${id}: ${r.blob.size} > ${limit}`);
+    }
+  });
+
+  test('сжатие до N КБ: невыполнимый лимит честно не достигается', async () => {
+    const r = await R.encodeToSize(noisy(300, 200), 'jpeg', 50, {});
+    eq(r.reached, false);
+    ok(r.blob.size > 50 && r.blob.size < 5000, 'возвращён самый маленький вариант: ' + r.blob.size);
+  });
+
+  test('сжатие до N КБ: форматы без потерь не пережимаются, только проверяется лимит', async () => {
+    const small = await R.encodeToSize(fixture(40, 30).source, 'png', 100000, {});
+    eq([small.reached, small.quality, small.scaled], [true, null, false]);
+    const big = await R.encodeToSize(noisy(400, 300), 'png', 1000, {});
+    eq(big.reached, false);
+  });
+
   /* ================= runner ================= */
 
   async function run(filter) {

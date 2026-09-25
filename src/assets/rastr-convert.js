@@ -733,6 +733,64 @@
     return (name || 'image').replace(/\.[^.\/\\]+$/, '') + '.' + f.ext;
   }
 
+  /* ---- сжатие до заданного веса ---- */
+
+  function scaleCanvas(canvas, k) {
+    const c = makeCanvas(canvas.width * k, canvas.height * k), x = ctx2d(c);
+    x.imageSmoothingEnabled = true;
+    x.imageSmoothingQuality = 'high';
+    x.drawImage(canvas, 0, 0, c.width, c.height);
+    return c;
+  }
+
+  // Подбирает качество (деление пополам), чтобы файл был не больше maxBytes.
+  // Если даже при качестве minQuality файл велик — уменьшает разрешение и подбирает снова.
+  // Возвращает { blob, width, height, quality, scaled, reached }; reached = false, если уложиться не удалось
+  // (тогда blob — самый маленький из полученных вариантов).
+  async function encodeToSize(canvas, formatId, maxBytes, opts) {
+    const f = formats.get(formatId);
+    if (!f) throw new Error('Неизвестный формат: ' + formatId);
+    const o = Object.assign({}, DEFAULTS, opts);
+    const at = (c, q) => encode(c, formatId, Object.assign({}, o, { quality: q }));
+
+    if (!f.lossy) {
+      const blob = await encode(canvas, formatId, o);
+      return { blob, width: canvas.width, height: canvas.height, quality: null, scaled: false, reached: blob.size <= maxBytes };
+    }
+
+    const MAX_Q = 0.92, MIN_Q = 0.5, FLOOR_Q = 0.1, MIN_SIDE = 16;
+    let src = canvas, smallest = null;
+    const keep = (blob, c, q) => { if (!smallest || blob.size < smallest.blob.size) smallest = { blob, width: c.width, height: c.height, quality: q }; };
+
+    for (let round = 0; round < 12; round++) {
+      const tiny = Math.max(src.width, src.height) <= MIN_SIDE * 4;
+      const lowQ = tiny ? FLOOR_Q : MIN_Q;
+      const top = await at(src, MAX_Q);
+      keep(top, src, MAX_Q);
+      if (top.size <= maxBytes) return done(top, src, MAX_Q);
+
+      const bottom = await at(src, lowQ);
+      keep(bottom, src, lowQ);
+      if (bottom.size <= maxBytes) {
+        let lo = lowQ, hi = MAX_Q, best = bottom, bestQ = lowQ;
+        for (let i = 0; i < 7; i++) {
+          const mid = (lo + hi) / 2, b = await at(src, mid);
+          if (b.size <= maxBytes) { best = b; bestQ = mid; lo = mid; } else hi = mid;
+        }
+        return done(best, src, bestQ);
+      }
+      if (Math.max(src.width, src.height) <= MIN_SIDE) break;
+      // вес растёт примерно пропорционально площади: уменьшаем стороны с запасом
+      const k = Math.min(0.9, Math.max(0.5, Math.sqrt(maxBytes / bottom.size) * 0.95));
+      src = scaleCanvas(src, k);
+    }
+    return Object.assign({ scaled: smallest.width !== canvas.width, reached: false }, smallest);
+
+    function done(blob, c, q) {
+      return { blob, width: c.width, height: c.height, quality: q, scaled: c !== canvas, reached: true };
+    }
+  }
+
   async function convert(input, formatId, opts) {
     const decoded = input && input.source ? input : await decode(input);
     const canvas = prepare(decoded, opts);
@@ -741,13 +799,13 @@
   }
 
   const api = {
-    version: '1.0.0',
+    version: '1.1.0',
     formats: () => Array.from(formats.values()),
     format: id => formats.get(id),
     inputs: ['PNG', 'JPEG', 'WEBP', 'AVIF', 'GIF', 'BMP', 'ICO', 'SVG', 'TIFF', 'HEIC', 'TGA', 'PPM/PGM/PBM'],
     register, registerDecoder,
     decode, prepare, encode, convert, computeSize, outputName,
-    pdfFromCanvases, zip, supportsMime
+    encodeToSize, pdfFromCanvases, zip, supportsMime
   };
   global.RastrConvert = api;
 })(window);

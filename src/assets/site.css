@@ -469,3 +469,16 @@ pre .s { color: #7FD8F0; }
 /* счётчик посещений в подвале */
 .counter { display: inline-flex; align-items: center; }
 .counter img { display: block; height: 20px; width: auto; border-radius: 4px; }
+
+/* сжатие до заданного веса */
+.target { display: grid; gap: 10px; }
+.target-unit { flex: 0 0 auto !important; color: var(--muted); }
+.target-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.target-chips button {
+  font-family: var(--f-mono); font-size: 12px; padding: 5px 9px; border-radius: 999px;
+  border: 1px solid var(--line-strong); background: var(--surface);
+}
+.target-chips button:hover { border-color: var(--ink); }
+.target-chips button[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--bg); }
+.sec.is-auto input[type="range"] { opacity: .35; }
+.fit { color: var(--ok); font-weight: 600; }

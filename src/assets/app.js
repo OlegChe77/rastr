@@ -22,6 +22,7 @@
     if (b < 1024 * 1024) return (b / 1024).toFixed(b < 10240 ? 1 : 0).replace('.', ',') + ' КБ';
     return (b / 1048576).toFixed(1).replace('.', ',') + ' МБ';
   }
+  function fmtLimit(bytes) { const kb = bytes / 1000; return kb >= 1000 && kb % 1000 === 0 ? kb / 1000 + ' МБ' : kb + ' КБ'; }
   function plural(n, a, b, c) { const m = n % 10, h = n % 100; return m === 1 && h !== 11 ? a : m >= 2 && m <= 4 && (h < 10 || h >= 20) ? b : c; }
   function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
   let toastTimer;
@@ -44,7 +45,9 @@
       gifDither: $('gif-dither').checked,
       icoSizes: [...document.querySelectorAll('#ico-sizes input:checked')].map(i => +i.value),
       resize: { mode, percent: +$('resize-percent').value || 100, width: +$('resize-w').value || 1, height: +$('resize-h').value || 1 },
-      rotate: state.rotate, flipH: state.flipH, flipV: state.flipV
+      rotate: state.rotate, flipH: state.flipH, flipV: state.flipV,
+      // «сжать до N КБ»: считаем КБ по 1000 байт — так файл пройдёт проверку и там, где КБ = 1024 байта
+      targetBytes: $('target-on').checked ? Math.max(1, +$('target-kb').value || 0) * 1000 : 0
     };
   }
 
@@ -95,6 +98,23 @@
 
   /* ---------- option controls ---------- */
   $('quality').addEventListener('input', () => { $('quality-v').textContent = $('quality').value + '%'; });
+
+  // Сжатие до заданного веса: качество подбирается автоматически, ползунок качества не используется
+  function syncTarget() {
+    const on = $('target-on').checked;
+    $('target-fields').hidden = !on;
+    $('quality').disabled = on;
+    $('quality').closest('.sec').classList.toggle('is-auto', on);
+    $('quality-v').textContent = on ? 'авто' : $('quality').value + '%';
+    const kb = String(+$('target-kb').value);
+    $('target-chips').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b.dataset.kb === kb));
+  }
+  $('target-on').addEventListener('change', syncTarget);
+  $('target-kb').addEventListener('input', syncTarget);
+  $('target-chips').addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    $('target-kb').value = b.dataset.kb; syncTarget();
+  });
   $('gif-colors').addEventListener('input', () => { $('gif-colors-v').textContent = $('gif-colors').value; });
 
   const SWATCHES = ['#ffffff', '#000000', '#eef0f5', '#f5e6c8', '#0a86a8', '#d3175e'];
@@ -184,7 +204,10 @@
       const r = item.result, pct = Math.round((r.blob.size / item.size - 1) * 100);
       res = '<span aria-hidden="true">→</span><span class="tag acc">' + r.format.label + '</span>' +
         '<span class="mono">' + r.width + '×' + r.height + ' · ' + fmtSize(r.blob.size) + '</span>' +
-        '<span class="mono delta ' + (pct <= 0 ? 'down' : 'up') + '">' + (pct > 0 ? '+' : pct < 0 ? '−' : '') + Math.abs(pct) + '%</span>';
+        '<span class="mono delta ' + (pct <= 0 ? 'down' : 'up') + '">' + (pct > 0 ? '+' : pct < 0 ? '−' : '') + Math.abs(pct) + '%</span>' +
+        (r.fit ? (r.fit.reached
+          ? '<span class="mono fit">≤ ' + fmtLimit(r.fit.limit) + ' · качество ' + Math.round(r.fit.quality * 100) + '%' + (r.fit.scaled ? ' · уменьшено' : '') + '</span>'
+          : '<span class="err">не удалось сжать до ' + fmtLimit(r.fit.limit) + '</span>') : '');
     }
     li.innerHTML =
       '<button type="button" class="thumb" data-act="preview" aria-label="Открыть предпросмотр ' + esc(item.name) + '"' + (item.thumb ? '' : ' disabled') + '>' +
@@ -250,8 +273,13 @@
         const canvas = R.prepare(item.decoded, o);
         if (single) { pages.push(canvas); item.status = 'ready'; }
         else {
-          const blob = await R.encode(canvas, f.id, o);
-          item.result = { blob, name: R.outputName(item.name, f.id), width: canvas.width, height: canvas.height, format: f };
+          let blob, w = canvas.width, h = canvas.height, fit = null;
+          if (o.targetBytes && f.lossy) {
+            const r = await R.encodeToSize(canvas, f.id, o.targetBytes, o);
+            blob = r.blob; w = r.width; h = r.height;
+            fit = { limit: o.targetBytes, reached: r.reached, quality: r.quality, scaled: r.scaled };
+          } else blob = await R.encode(canvas, f.id, o);
+          item.result = { blob, name: R.outputName(item.name, f.id), width: w, height: h, format: f, fit };
           item.status = 'done';
         }
         ok++;
@@ -342,6 +370,8 @@
     if (preset.resize.height) $('resize-h').value = preset.resize.height;
   }
   if (preset.pdfSingle) $('pdf-single').checked = true;
+  if (preset.targetKB) { $('target-on').checked = true; $('target-kb').value = preset.targetKB; }
+  syncTarget();
   if (preset.icoSizes) document.querySelectorAll('#ico-sizes input').forEach(i => { i.checked = preset.icoSizes.includes(+i.value); });
 
   let start = preset.format;

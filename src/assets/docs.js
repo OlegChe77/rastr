@@ -131,7 +131,7 @@
     else if (!fits) res = '<span class="err">' + (state.target === 'merge' ? 'Объединять можно только PDF'
       : item.kind === state.target ? 'Файл уже в формате ' + TARGETS[state.target].label
       : 'Этот файл нельзя перевести в ' + TARGETS[state.target].label) + '</span>';
-    else res = '<span>Ждёт конвертации</span>';
+    else res = '<span>' + (state.target === 'merge' ? 'Войдёт в общий PDF' : 'Ждёт конвертации') + '</span>';
     const kindLabel = item.kind && D.KINDS[item.kind] ? D.KINDS[item.kind].label : (item.status === 'loading' ? '…' : '?');
     li.innerHTML =
       '<div class="doc-ic" aria-hidden="true">' + esc(kindLabel) + '</div>' +

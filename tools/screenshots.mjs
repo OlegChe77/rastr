@@ -69,6 +69,37 @@ try {
     await page.waitForTimeout(3500);
   } });
   await shot('docs-hub', '/dokumenty/');
+  // «Сжать до N КБ»: тяжёлое фото уложено в 200 КБ
+  await shot('target-kb', '/szhat-foto-do-kb/', { element: '#app', prepare: async page => {
+    await page.evaluate(async () => {
+      const c = document.createElement('canvas'); c.width = 3000; c.height = 2000;
+      const x = c.getContext('2d'), img = x.createImageData(3000, 2000);
+      let s = 5;
+      for (let i = 0; i < img.data.length; i += 4) {
+        s = (s * 1103515245 + 12345) & 0x7fffffff;
+        const px = (i / 4) % 3000, py = Math.floor(i / 4 / 3000), n = (s >> 16) & 63;
+        img.data[i] = (px / 12 + n) & 255; img.data[i + 1] = (py / 9 + n) & 255; img.data[i + 2] = (180 + n) & 255; img.data[i + 3] = 255;
+      }
+      x.putImageData(img, 0, 0);
+      const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.95));
+      const dt = new DataTransfer();
+      dt.items.add(new File([blob], 'фото-для-госуслуг.jpg', { type: 'image/jpeg' }));
+      window.dispatchEvent(new DragEvent('drop', { dataTransfer: dt, cancelable: true }));
+    });
+    await page.waitForFunction(() => document.querySelector('.row[data-status="ready"]'));
+    await page.click('#run');
+    await page.waitForFunction(() => document.querySelector('.row[data-status="done"]'), null, { timeout: 60000 });
+    await page.waitForTimeout(3200);
+  } });
+  // «Объединить PDF»: три файла и стрелки порядка
+  await shot('merge', '/obedinit-pdf/', { element: '#app', prepare: async page => {
+    await page.setInputFiles('#file', [
+      { name: 'договор.pdf', mimeType: 'application/pdf', buffer: F.pdf([['Contract'], ['Page 2'], ['Page 3']]) },
+      { name: 'приложение-1.pdf', mimeType: 'application/pdf', buffer: F.pdf([['Appendix 1']]) },
+      { name: 'скан-паспорта.pdf', mimeType: 'application/pdf', buffer: F.pdf([['Scan']]) }
+    ]);
+    await page.waitForFunction(() => [...document.querySelectorAll('.row')].every(r => r.dataset.status === 'ready'));
+  } });
 } finally {
   await browser.close();
   await server.close();

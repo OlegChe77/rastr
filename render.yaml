@@ -63,6 +63,9 @@ services:
         source: /izmenit-razmer-foto
         destination: /izmenit-razmer-foto/
       - type: redirect
+        source: /konverter-izobrazhenij
+        destination: /konverter-izobrazhenij/
+      - type: redirect
         source: /dokumenty
         destination: /dokumenty/
       - type: redirect

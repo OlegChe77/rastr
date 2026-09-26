@@ -5,6 +5,8 @@ import fs from 'node:fs/promises';
 import { startServer, launch, bmp, noisyBmp, zipEntries } from './helpers.mjs';
 
 let server, browser, context, errors;
+// конвертер изображений живёт на своей странице, главная — обзор сервиса
+const CONVERTER = '/konverter-izobrazhenij/';
 
 before(async () => { server = await startServer(); browser = await launch(); });
 after(async () => { await browser?.close(); await server?.close(); });
@@ -19,7 +21,7 @@ async function openSite(viewport) {
   errors = [];
   page.on('pageerror', e => errors.push(e.message));
   page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
-  await page.goto(server.url + '/');
+  await page.goto(server.url + CONVERTER);
   await page.locator('#fmts .fmt').first().waitFor();
   return page;
 }
@@ -204,7 +206,7 @@ test('сжатие до 200 КБ: тяжёлое фото укладываетс
   assert.deepEqual(await page.$$eval('#fmts .fmt', b => b.map(x => x.dataset.id)), ['jpeg', 'webp', 'avif']);
 
   // на главной сжатие до размера — обычная галочка, её можно выключить
-  await page.goto(server.url + '/');
+  await page.goto(server.url + CONVERTER);
   await page.click('#fmts .fmt[data-id="jpeg"]');
   await page.check('#target-on');
   assert.equal(await page.locator('#quality-v').innerText(), 'авто');
@@ -298,4 +300,27 @@ test('на телефоне нет горизонтальной прокрутк
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   assert.ok(overflow <= 0, 'страница шире экрана на ' + overflow + ' px');
   assert.ok(await page.locator('#run').isVisible());
+});
+
+test('главная — обзор сервиса: разделы, цифры, популярные страницы, без конвертера', async () => {
+  context = await browser.newContext();
+  const page = await context.newPage();
+  errors = [];
+  page.on('pageerror', e => errors.push(e.message));
+  await page.goto(server.url + '/');
+  assert.equal(await page.title(), 'Растр — онлайн-конвертер картинок и документов без сервера');
+  assert.equal(await page.locator('#app').count(), 0, 'конвертера на главной нет');
+  assert.equal(await page.locator('h1').innerText(), 'Онлайн-конвертер картинок и документов');
+  assert.deepEqual(await page.$$eval('.hero-cta a', a => a.map(x => x.getAttribute('href'))), ['/konverter-izobrazhenij/', '/dokumenty/']);
+  assert.deepEqual(await page.$$eval('#sections .tools a', a => a.map(x => x.getAttribute('href'))), ['/konverter-izobrazhenij/', '/dokumenty/', '/instrumenty/']);
+  assert.equal(await page.locator('.stats-row li').count(), 4);
+  for (const id of ['how', 'why', 'popular', 'docs', 'tools', 'formats', 'faq']) assert.equal(await page.locator('#' + id).count(), 1, 'нет блока ' + id);
+  // таблица форматов на главной справочная: названия ведут в справочник
+  assert.equal(await page.locator('#ref-body').count(), 0);
+  assert.equal(await page.locator('#formats a[href="/formaty/#png"]').count(), 1);
+  // «Картинки» в меню ведут на конвертер
+  await page.click('.menu a:has-text("Картинки")');
+  await page.locator('#fmts .fmt').first().waitFor();
+  assert.equal(new URL(page.url()).pathname, CONVERTER);
+  assert.equal(await page.locator('.menu a[aria-current="page"]').innerText(), 'Картинки');
 });

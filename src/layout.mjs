@@ -13,6 +13,10 @@ const ICONS = {
   layers: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 2 10 5-10 5L2 7z"/><path d="m2 17 10 5 10-5M2 12l10 5 10-5"/></svg>',
   gift: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12v10H4V12M2 7h20v5H2zM12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>',
   check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5L20 7"/></svg>',
+  // иконки разделов главной: картинка, документ, инструменты
+  image: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/></svg>',
+  doc: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg>',
+  wrench: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2.4-.6-.6-2.4z"/></svg>',
   // иконки инструментов: сжатие (стрелки внутрь), вес с отметкой лимита, размер (рамка со стрелками наружу)
   compress: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7"/></svg>',
   target: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 20h12l-1.5-9h-9z"/><path d="M9 11a3 3 0 0 1 6 0"/><path d="M4 5h16"/><path d="M12 5v3"/></svg>',
@@ -22,7 +26,7 @@ const ICONS = {
 export { ICONS };
 
 export const NAV = [
-  { href: '/', label: 'Картинки' },
+  { href: '/konverter-izobrazhenij/', label: 'Картинки' },
   { href: '/dokumenty/', label: 'Документы' },
   { href: '/instrumenty/', label: 'Инструменты' },
   { href: '/formaty/', label: 'Форматы', cls: 'hide-xs' },
@@ -114,7 +118,7 @@ function header(p) {
   return `<a class="skip" href="#main">Перейти к содержимому</a>
 <header class="site-head">
   <div class="wrap head-in">
-    <a class="logo" href="/" aria-label="Растр — конвертер изображений, на главную">${LOGO_MARK}<b>Растр</b></a>
+    <a class="logo" href="/" aria-label="Растр — конвертер картинок и документов, на главную">${LOGO_MARK}<b>Растр</b></a>
     <nav class="menu" aria-label="Основное меню">${links}</nav>
   </div>
 </header>`;
@@ -145,7 +149,7 @@ function footer(site) {
     ? `<span class="counter" id="counter" hidden data-host="${esc(host)}" data-src="https://hits.sh/${esc(encodeURIComponent(key))}.svg?view=today-total&amp;label=%D0%9F%D0%BE%D1%81%D0%B5%D1%89%D0%B5%D0%BD%D0%B8%D0%B9&amp;style=flat-square&amp;color=0f1320&amp;labelColor=5e6679"></span>`
     : '';
   const col = (title, items) => `<div class="foot-col"><h2>${title}</h2><ul>${items.map(([href, label]) => `<li><a href="${href}">${esc(label)}</a></li>`).join('')}</ul></div>`;
-  const conv = converters.map(l => [`/${l.slug}/`, plainCard(l)]);
+  const conv = [['/konverter-izobrazhenij/', 'Конвертер изображений']].concat(converters.map(l => [`/${l.slug}/`, plainCard(l)]));
   const dl = documents.map(d => [`/${d.slug}/`, plainCard(d)]).concat([['/dokumenty/', 'Все документы']]);
   const tl = tools.map(l => [`/${l.slug}/`, l.card[0]]).concat([['/instrumenty/', 'Все инструменты']]);
   return `<footer class="site-foot">
@@ -365,12 +369,14 @@ const APP_TAIL = `<dialog id="dlg" class="ym-hide-content" aria-labelledby="dlg-
 
 /* ---------------- общие блоки контента ---------------- */
 
-export function hero({ h1, lead, eyebrow = 'Бесплатно · без регистрации · без загрузки на сервер', chips = true }) {
+// cta — кнопки перехода в первом экране: [[href, текст, главная?], …]
+export function hero({ h1, lead, eyebrow = 'Бесплатно · без регистрации · без загрузки на сервер', chips = true, cta = null }) {
   const chipList = ['Файлы не покидают устройство', 'Пакетная обработка', 'Скачать всё одним ZIP'];
   return `<section class="wrap hero">
   <span class="eyebrow"><i></i>${esc(eyebrow)}</span>
   <h1>${h1}</h1>
   <p class="lead">${lead}</p>
+  ${cta ? `<div class="hero-cta">${cta.map(([href, label, main]) => `<a class="btn${main ? ' primary' : ''}" href="${href}">${esc(label)}</a>`).join('')}</div>` : ''}
   ${chips ? `<ul class="chips">${chipList.map(c => `<li>${ICONS.check}${c}</li>`).join('')}</ul>` : ''}
 </section>`;
 }

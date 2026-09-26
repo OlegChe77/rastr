@@ -169,7 +169,7 @@ test('встроенный скрипт, вставленный в страни�
 });
 
 test('имя файла с HTML-кодом выводится как текст, а не как разметка', async () => {
-  const { page, problems, close } = await open('/');
+  const { page, problems, close } = await open('/konverter-izobrazhenij/');
   try {
     const evil = '<img src=x onerror="window.__xss=1">.png';
     await page.setInputFiles('#file', [{ name: evil, mimeType: 'image/png', buffer: Buffer.from('не картинка') }]);
@@ -225,7 +225,7 @@ test('Яндекс Метрика: запускается с нужным ном
     r.fulfill({ response: res, body: (await res.text()).replace(/data-host="[^"]+"/g, `data-host="${host}"`) });
   });
   try {
-    await page.goto(server.url + '/');
+    await page.goto(server.url + '/konverter-izobrazhenij/');
     await page.waitForFunction(() => window.__ymTag === true);
     assert.ok(tagRequests.some(u => u.includes('/metrika/tag.js?id=113053384')), 'tag.js с номером счётчика');
     const init = await page.evaluate(() => (window.ym.a || []).map(a => Array.from(a)).find(a => a[1] === 'init'));

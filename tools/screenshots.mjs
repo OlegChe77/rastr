@@ -51,9 +51,10 @@ const converted = async page => {
 
 try {
   await shot('home', '/');
-  await shot('converter', '/', { element: '#app', prepare: converted });
+  await shot('converter', '/konverter-izobrazhenij/', { element: '#app', prepare: converted });
   await shot('landing-heic', '/heic-v-jpg/');
-  await shot('dark', '/', { dark: true });
+  await shot('dark', '/konverter-izobrazhenij/', { dark: true });
+  await shot('home-sections', '/', { element: '#sections' });
   await shot('popular', '/', { element: '#popular' });
   await shot('mobile', '/', { width: 390, height: 844 });
   // конвертер документов: договор в PDF, отчёт Word и таблица CSV переведены в PDF

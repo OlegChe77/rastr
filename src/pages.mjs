@@ -7,6 +7,7 @@ import { esc, converter, docConverter, hero, faqHtml, faqSchema, linksGrid, tool
 const HOME = { name: 'Главная', path: '/' };
 const TOOLS_CRUMB = { name: 'Инструменты', path: '/instrumenty/' };
 const DOCS_CRUMB = { name: 'Документы', path: '/dokumenty/' };
+const IMAGES_CRUMB = { name: 'Картинки', path: '/konverter-izobrazhenij/' };
 
 function webApp(site, name, path, description) {
   return {
@@ -26,11 +27,34 @@ const section = (id, title, sub, inner) => `<section class="wrap section"${id ? 
   ${inner}
 </section>`;
 
+// Главная: как пользоваться сайтом целиком
 const HOW = steps([
-  ['Добавьте картинки', 'Перетащите файлы в рамку, выберите их кнопкой или вставьте из буфера обмена.'],
-  ['Выберите формат', 'JPG, PNG, WEBP, AVIF, PDF, ICO и ещё 8 форматов. Качество и размер можно настроить.'],
+  ['Выберите раздел', 'Картинки, документы или инструменты для фото — либо сразу страницу под задачу, например «HEIC в JPG».'],
+  ['Добавьте файлы', 'Перетащите их на страницу или выберите кнопкой. Можно сразу много — обработка идёт прямо в браузере.'],
   ['Скачайте результат', 'По одному файлу или всё сразу одним ZIP-архивом. Регистрация не нужна.']
 ]);
+
+// Страница конвертера изображений: как работать именно с ним
+const CONVERTER_STEPS = steps([
+  ['Загрузите картинки', 'Бросьте файлы в рамку конвертера, нажмите «Выбрать файлы» или вставьте скриншот сочетанием Ctrl+V.'],
+  ['Укажите формат', 'Нажмите нужный формат в блоке «Формат на выходе». Серые кнопки — форматы, которые ваш браузер сохранить не может.'],
+  ['Настройте результат', 'Качество, фон вместо прозрачности, размер, поворот. Показываются только настройки, которые имеют смысл для формата.'],
+  ['Сохраните файлы', 'Кнопка «Скачать» у каждого файла или «Скачать всё одним .zip». Миниатюра открывает сравнение до и после.']
+]);
+
+// Три раздела сайта — карточки на главной
+const SECTIONS = [
+  { slug: 'konverter-izobrazhenij', icon: 'image', card: ['Картинки', null, '14 форматов: PNG, JPG, WEBP, HEIC с iPhone, AVIF, ICO, TIFF, PDF и другие. Размер, качество, поворот.'] },
+  { slug: 'dokumenty', icon: 'doc', card: ['Документы', null, 'PDF в Word и JPG, Word в PDF, Excel в CSV, Markdown в HTML. Объединение и разделение PDF.'] },
+  { slug: 'instrumenty', icon: 'wrench', card: ['Инструменты', null, 'Сжать фото, уложиться в лимит сайта вроде 200 КБ, изменить размер в пикселях.'] }
+];
+
+const STATS = `<ul class="stats-row">
+  <li><b>14</b><span>форматов картинок на выход</span></li>
+  <li><b>10</b><span>форматов документов на вход</span></li>
+  <li><b>40+</b><span>готовых страниц под задачи</span></li>
+  <li><b>0 байт</b><span>ваших файлов на сервере</span></li>
+</ul>`;
 
 const FEATURES = `<div class="features">
   <div class="feature"><div class="ic">${ICONS.lock}</div><h3>Файлы остаются у вас</h3><p>Конвертация идёт прямо в браузере. Фото, сканы и макеты не загружаются ни на какой сервер.</p></div>
@@ -39,12 +63,17 @@ const FEATURES = `<div class="features">
   <div class="feature"><div class="ic">${ICONS.gift}</div><h3>Бесплатно</h3><p>Без регистрации, водяных знаков, лимитов на число файлов и платных тарифов.</p></div>
 </div>`;
 
-function formatsTable(formats) {
+// interactive — таблица на странице конвертера: клик по строке выбирает формат (app.js).
+// На главной — справочная, названия форматов ведут в справочник.
+function formatsTable(formats, interactive) {
   const comp = f => f.lossy ? 'С потерями' : f.id === 'gif' ? 'Без потерь, 256 цветов' : ['bmp', 'tiff', 'tga', 'ppm', 'pgm'].includes(f.id) ? 'Без сжатия' : 'Без потерь';
+  const ref = { jpeg: 'jpeg', png: 'png', webp: 'webp', avif: 'avif', gif: 'gif', bmp: 'bmp', ico: 'ico', tiff: 'tiff', tga: 'tga', pdf: 'pdf', svg: 'svg', ppm: 'ppm', pgm: 'ppm', datauri: 'datauri' };
   return `<div class="card"><div class="table-wrap"><table>
     <thead><tr><th>Формат</th><th>Прозрачность</th><th>Сжатие</th><th>MIME-тип</th><th>Когда выбирать</th></tr></thead>
-    <tbody id="ref-body">${formats.map(f =>
-      `<tr data-id="${f.id}" tabindex="0"><td class="fx">${f.label} <span class="mono no">.${f.ext}</span></td>` +
+    <tbody${interactive ? ' id="ref-body"' : ''}>${formats.map(f =>
+      (interactive
+        ? `<tr data-id="${f.id}" tabindex="0"><td class="fx">${f.label} <span class="mono no">.${f.ext}</span></td>`
+        : `<tr><td class="fx"><a href="/formaty/#${ref[f.id]}">${f.label}</a> <span class="mono no">.${f.ext}</span></td>`) +
       `<td class="${f.alpha ? 'yes' : 'no'}">${f.alpha ? (f.id === 'gif' ? 'Да, 1 бит' : 'Да') : 'Нет, заливка фоном'}</td>` +
       `<td>${comp(f)}</td><td class="mono no">${f.mime}</td><td>${esc(f.use)}</td></tr>`).join('')}</tbody>
   </table></div></div>`;
@@ -53,47 +82,103 @@ function formatsTable(formats) {
 
 const HOME_FAQ = [
   { q: 'Это правда бесплатно?', a: 'Да. Растр бесплатный, без регистрации, водяных знаков и ограничений на количество файлов.' },
-  { q: 'Куда загружаются мои картинки?', a: 'Никуда. Конвертация идёт в вашем браузере, файлы не покидают устройство. Поэтому Растр подходит даже для сканов документов.' },
-  { q: 'Какие форматы поддерживаются?', a: 'На вход: PNG, JPG, WEBP, AVIF, GIF, BMP, ICO, SVG, TIFF, HEIC, TGA, PPM/PGM/PBM. На выход: PNG, JPG, WEBP, AVIF, GIF, BMP, ICO, TIFF, TGA, PDF, SVG, PPM, PGM и Base64. Подробнее — на странице <a href="/formaty/">«Форматы изображений»</a>.' },
-  { q: 'Как конвертировать сразу много файлов?', a: 'Выделите все картинки в папке (<kbd>Ctrl</kbd>+<kbd>A</kbd>) и перетащите их на страницу, выберите формат и нажмите «Конвертировать». Готовые файлы можно скачать одним ZIP-архивом.' },
-  { q: 'Работает ли конвертер на телефоне?', a: 'Да, в любом современном браузере на Android и iPhone. Установка приложений не нужна.' },
+  { q: 'Куда загружаются мои файлы?', a: 'Никуда. Картинки и документы обрабатываются в вашем браузере и не покидают устройство. Поэтому Растр подходит даже для сканов паспорта и договоров.' },
+  { q: 'С чего начать?', a: 'Для картинок откройте <a href="/konverter-izobrazhenij/">конвертер изображений</a>, для PDF, Word и таблиц — <a href="/dokumenty/">конвертер документов</a>. Если задача частая, например «HEIC в JPG» или «объединить PDF», сразу выберите её страницу ниже — там уже всё настроено.' },
+  { q: 'Какие форматы поддерживаются?', a: 'Картинки: PNG, JPG, WEBP, AVIF, GIF, BMP, ICO, SVG, TIFF, HEIC, TGA, PPM/PGM/PBM. Документы: PDF, Word (DOCX), Excel (XLSX, XLS, ODS), CSV, TXT, Markdown, HTML и JSON. Подробнее о картинках — в <a href="/formaty/">справочнике форматов</a>.' },
+  { q: 'Работает ли Растр на телефоне?', a: 'Да, в любом современном браузере на Android и iPhone. Установка приложений не нужна.' },
   { q: 'Почему файл после конвертации стал тяжелее?', a: 'Так бывает при переходе в формат без потерь: JPG в PNG, BMP или TIFF. Чтобы уменьшить вес, выбирайте JPG, WEBP или AVIF, а также воспользуйтесь страницей <a href="/szhat-foto/">«Сжать фото»</a>.' }
+];
+
+const CONVERTER_FAQ = [
+  { q: 'Можно ли вставить скриншот, не сохраняя его в файл?', a: 'Да. Сделайте снимок экрана, откройте эту страницу и нажмите <kbd>Ctrl</kbd>+<kbd>V</kbd> — картинка сразу появится в очереди.' },
+  { q: 'Запоминается ли выбранный формат?', a: 'Да, последний формат сохраняется в вашем браузере, и при следующем визите он будет выбран сразу.' },
+  { q: 'Что значит ошибка «Браузер не смог открыть этот файл»?', a: 'Файл повреждён или это не картинка. Проверьте, открывается ли он в программе просмотра, и добавьте снова.' },
+  { q: 'Как сделать из картинок один PDF?', a: 'Выберите формат PDF и поставьте галочку «Собрать все картинки в один PDF». Для документов Word и таблиц есть отдельный <a href="/dokumenty/">конвертер документов</a>.' }
 ];
 
 export function getPages(site, formats) {
   const pages = [];
 
-  /* ---------- главная ---------- */
-  const homeDesc = 'Бесплатный конвертер изображений онлайн: PNG, JPG, WEBP, HEIC, AVIF, PDF, ICO, SVG и другие — 14 форматов. Пакетно и без загрузки файлов на сервер.';
+  /* ---------- главная: о сервисе и все разделы ---------- */
+  const homeDesc = 'Растр переводит картинки и документы между форматами прямо в браузере: PNG, JPG, HEIC, WEBP, PDF, Word, Excel. Бесплатно, без регистрации и загрузки на сервер.';
   pages.push({
     path: '/', file: 'index.html', ogKey: 'home', priority: '1.0', changefreq: 'weekly',
-    title: 'Конвертер изображений онлайн: PNG, JPG, WEBP, HEIC | Растр',
-    ogTitle: 'Растр — конвертер изображений онлайн',
+    title: 'Растр — онлайн-конвертер картинок и документов без сервера',
+    ogTitle: 'Растр — конвертер картинок и документов',
     description: homeDesc,
-    keywords: 'конвертер изображений, конвертер картинок онлайн, конвертировать изображение, изменить формат фото, png в jpg, jpg в png, heic в jpg, webp в jpg, конвертер фото',
-    app: true,
+    keywords: 'онлайн конвертер файлов, конвертер картинок и документов, конвертер без загрузки на сервер, конвертер изображений, конвертер документов, конвертер pdf, конвертер фото онлайн',
     schema: [
-      { '@context': 'https://schema.org', '@type': 'WebSite', name: site.name, alternateName: 'Растр — конвертер изображений', url: site.url + '/', inLanguage: 'ru' },
-      webApp(site, 'Растр — конвертер изображений онлайн', '/', homeDesc),
+      { '@context': 'https://schema.org', '@type': 'WebSite', name: site.name, alternateName: 'Растр — конвертер картинок и документов', url: site.url + '/', inLanguage: 'ru', description: homeDesc },
+      { '@context': 'https://schema.org', '@type': 'ItemList', name: 'Разделы Растра',
+        itemListElement: SECTIONS.map((s, i) => ({ '@type': 'ListItem', position: i + 1, name: s.card[0], url: site.url + '/' + s.slug + '/' })) },
       faqSchema(HOME_FAQ)
     ],
-    body: `${hero({ h1: 'Конвертер изображений онлайн', lead: 'Переводите картинки между 14 форматами прямо в браузере: PNG, JPG, WEBP, HEIC с iPhone, AVIF, PDF, ICO и другие. Меняйте размер, качество и ориентацию — пачкой и без загрузки файлов на сервер.' })}
-<div class="wrap">${converter()}</div>
-${section('how', 'Как конвертировать изображение', 'Три шага, без регистрации и установки программ.', HOW)}
+    body: `${hero({
+      h1: 'Онлайн-конвертер картинок и документов',
+      lead: 'Растр переводит файлы между форматами прямо в браузере: фото с iPhone в JPG, PNG в WEBP, PDF в Word, Word в PDF, Excel в CSV. Сжимает фото до нужного веса и меняет размер. Бесплатно, без регистрации — и файлы не покидают ваше устройство.',
+      cta: [['/konverter-izobrazhenij/', 'Конвертировать картинки', true], ['/dokumenty/', 'Конвертировать документы']]
+    })}
+${section('sections', 'Что умеет Растр', 'Три раздела — выберите нужный или сразу страницу под задачу ниже.', toolsGrid(SECTIONS))}
+<section class="wrap">${STATS}</section>
+${section('how', 'Как пользоваться Растром', 'Три шага, без регистрации и установки программ.', HOW)}
+${section('why', 'Почему Растр', null, FEATURES)}
+${section('popular', 'Конвертеры картинок', 'Страницы с готовыми настройками под частые пары форматов. <a href="/konverter-izobrazhenij/">Открыть конвертер изображений</a>.', linksGrid(converters))}
 ${section('docs', 'Конвертер документов', 'PDF, Word, Excel, CSV, TXT и Markdown — тоже прямо в браузере. <a href="/dokumenty/">Все конвертеры документов</a>.', linksGrid(documents.slice(0, 8)))}
 ${section('tools', 'Инструменты для фото', 'Отдельные сервисы под частые задачи: уменьшить вес, уложиться в лимит сайта, поменять размер.', toolsGrid(tools))}
-${section('popular', 'Конвертеры форматов', 'Страницы с готовыми настройками под частые пары форматов.', linksGrid(converters))}
-${section('why', 'Почему Растр', null, FEATURES)}
-${section('formats', 'Какой формат выбрать', 'Нажмите на строку, чтобы выбрать формат в конвертере. Подробнее о каждом — в <a href="/formaty/">справочнике форматов</a>.', formatsTable(formats))}
+${section('formats', 'Какой формат выбрать', 'Коротко о форматах картинок. Подробнее о каждом — в <a href="/formaty/">справочнике форматов</a>.', formatsTable(formats, false))}
 ${section('faq', 'Частые вопросы', null, faqHtml(HOME_FAQ))}`
   });
+
+  /* ---------- конвертер изображений: сам конвертер и как с ним работать ---------- */
+  {
+    const path = '/konverter-izobrazhenij/';
+    const crumbs = [HOME, IMAGES_CRUMB];
+    const desc = 'Конвертер изображений онлайн: PNG, JPG, WEBP, HEIC, AVIF, ICO, SVG, TIFF, PDF — 14 форматов. Пакетно, с настройкой качества и размера, без загрузки на сервер.';
+    pages.push({
+      path, file: 'konverter-izobrazhenij/index.html', ogKey: 'konverter-izobrazhenij', priority: '1.0', changefreq: 'weekly', crumbs,
+      title: 'Конвертер изображений онлайн: PNG, JPG, WEBP, HEIC | Растр',
+      ogTitle: 'Конвертер изображений онлайн',
+      description: desc,
+      keywords: 'конвертер изображений онлайн, конвертер картинок, конвертировать изображение, изменить формат фото, конвертер фото онлайн, png jpg webp heic',
+      app: true,
+      schema: [webApp(site, 'Конвертер изображений онлайн', path, desc), crumbsSchema(site, crumbs), faqSchema(CONVERTER_FAQ)],
+      body: `${hero({ h1: 'Конвертер изображений онлайн', lead: 'Переводите картинки между 14 форматами прямо в браузере: PNG, JPG, WEBP, HEIC с iPhone, AVIF, PDF, ICO и другие. Меняйте размер, качество и ориентацию — пачкой и без загрузки файлов на сервер.' })}
+<div class="wrap">${converter()}</div>
+${section('how', 'Как работать с конвертером', 'Четыре шага от файла до результата.', CONVERTER_STEPS)}
+<section class="wrap section"><div class="prose">
+  <h2>Что означают настройки</h2>
+  <div class="card table-wrap"><table>
+    <thead><tr><th>Блок</th><th>Для чего</th></tr></thead>
+    <tbody>
+      <tr><td>Формат на выходе</td><td>Во что сохранить картинки. Значок с клетками — формат поддерживает прозрачность.</td></tr>
+      <tr><td>Качество</td><td>Для JPG, WEBP, AVIF и PDF: ниже — легче файл, но заметнее искажения. Для фото хватает 75–85%.</td></tr>
+      <tr><td>Сжать до размера файла</td><td>Задайте вес, например 200 КБ, — качество подберётся само.</td></tr>
+      <tr><td>Фон вместо прозрачности</td><td>Цвет для прозрачных мест в форматах, которые не хранят прозрачность.</td></tr>
+      <tr><td>Размер</td><td>В процентах, по ширине, по высоте, вписать в рамку или растянуть до точного размера.</td></tr>
+      <tr><td>Поворот и отражение</td><td>90°, 180°, 270° и зеркальное отражение — применяются ко всем файлам сразу.</td></tr>
+    </tbody>
+  </table></div>
+  <p>Настройки действуют на все файлы в очереди. Поменяли их после конвертации — нажмите кнопку ещё раз, результаты пересчитаются.</p>
+  <h2>Полезные приёмы</h2>
+  <ul>
+    <li>Файлы можно бросать в любое место страницы, не только в рамку конвертера.</li>
+    <li>Зелёный процент у готового файла — насколько он стал легче, красный — насколько тяжелее исходника.</li>
+    <li>Для частых задач есть страницы с готовыми настройками — они перечислены в конце этой страницы.</li>
+    <li>Документы PDF, Word и Excel конвертируются в отдельном разделе <a href="/dokumenty/">«Документы»</a>.</li>
+  </ul>
+</div></section>
+${section('formats', 'Выберите формат под задачу', 'Нажмите на строку — формат выберется в конвертере выше.', formatsTable(formats, true))}
+${section('faq', 'Вопросы о конвертере изображений', null, faqHtml(CONVERTER_FAQ))}
+${section('popular', 'Конвертеры форматов', 'Готовые настройки под частые пары форматов.', linksGrid(converters))}`
+    });
+  }
 
   /* ---------- посадочные страницы ---------- */
   for (const l of landings) {
     const path = `/${l.slug}/`;
     const name = l.card[1] ? `${l.card[0]} в ${l.card[1]}` : l.card[0];
     const isTool = l.kind === 'tool';
-    const crumbs = isTool ? [HOME, TOOLS_CRUMB, { name, path }] : [HOME, { name, path }];
+    const crumbs = isTool ? [HOME, TOOLS_CRUMB, { name, path }] : [HOME, IMAGES_CRUMB, { name, path }];
     const related = l.related.map(s => landings.find(x => x.slug === s)).filter(Boolean);
     pages.push({
       path, file: `${l.slug}/index.html`, ogKey: l.slug, priority: '0.9', changefreq: 'monthly',
@@ -204,7 +289,7 @@ ${section('faq', 'Вопросы о конвертере документов', 
       <tr><td>Фото не отправляется по почте или долго грузится</td><td><a href="/szhat-foto/">Сжать фото</a></td></tr>
       <tr><td>Сайт пишет «файл не должен превышать 200 КБ»</td><td><a href="/szhat-foto-do-kb/">Сжать до N КБ</a></td></tr>
       <tr><td>Нужна картинка ровно 1080 пикселей по ширине</td><td><a href="/izmenit-razmer-foto/">Изменить размер фото</a></td></tr>
-      <tr><td>Нужно поменять формат, например HEIC на JPG</td><td><a href="/">Конвертер форматов</a></td></tr>
+      <tr><td>Нужно поменять формат, например HEIC на JPG</td><td><a href="/konverter-izobrazhenij/">Конвертер изображений</a></td></tr>
     </tbody>
   </table></div>
   <p>Все инструменты принимают те же 12 форматов, что и конвертер, обрабатывают сразу много файлов и отдают результат одним ZIP-архивом. Настройки размера, поворота и фона для прозрачных мест есть в каждом из них.</p>
@@ -379,8 +464,8 @@ ${section('all', 'Готовые конвертеры', null, linksGrid(landings
   </svg>
   <span class="label">Ошибка 404</span>
   <h1>Такой страницы нет</h1>
-  <p>Возможно, ссылка устарела или в адресе опечатка. Конвертер на месте.</p>
-  <a class="btn primary" href="/">Открыть конвертер</a>
+  <p>Возможно, ссылка устарела или в адресе опечатка. Все конвертеры на месте.</p>
+  <div class="hero-cta"><a class="btn primary" href="/">На главную</a><a class="btn" href="/konverter-izobrazhenij/">Конвертер изображений</a><a class="btn" href="/dokumenty/">Конвертер документов</a></div>
 </section>
 ${section('all', 'Популярные конвертеры', null, linksGrid(landings.slice(0, 8)))}`
   });

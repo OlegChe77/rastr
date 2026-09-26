@@ -76,7 +76,7 @@
     (f.alpha ? '<span class="alpha" aria-label="прозрачность"></span>' : '') + '</button>'
   ).join('');
 
-  // Таблица форматов есть только на главной; её строки уже в HTML, здесь только отмечаем недоступные
+  // Таблица форматов есть только на странице конвертера изображений; её строки уже в HTML, здесь только отмечаем недоступные
   const refBody = $('ref-body');
   if (refBody) {
     refBody.querySelectorAll('tr').forEach(tr => {
@@ -98,7 +98,7 @@
     updateSummary();
     return true;
   }
-  // На тематических страницах выбор не запоминаем, чтобы не сбивать главную
+  // На тематических страницах выбор не запоминаем, чтобы не сбивать основной конвертер
   const remember = !preset.format;
   $('fmts').addEventListener('click', e => { const b = e.target.closest('.fmt'); if (b && !b.disabled) setFormat(b.dataset.id, remember); });
   if (refBody) {

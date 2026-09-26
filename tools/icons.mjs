@@ -54,7 +54,8 @@ console.log('Иконки: ' + Object.keys(out).join(', '));
 
 // Превью для соцсетей и мессенджеров, 1200×630
 const cards = [
-  { key: 'home', title: 'Конвертер изображений онлайн', sub: '14 форматов · прямо в браузере · бесплатно' },
+  { key: 'home', title: 'Конвертер картинок и документов', sub: 'Прямо в браузере · бесплатно · без загрузки на сервер' },
+  { key: 'konverter-izobrazhenij', title: 'Конвертер изображений онлайн', sub: '14 форматов · прямо в браузере · бесплатно' },
   { key: 'formaty', title: 'Форматы изображений', sub: 'PNG, JPG, WEBP, AVIF, HEIC и другие' },
   { key: 'dokumenty', title: 'Конвертер документов', sub: 'PDF · Word · Excel · CSV · Markdown' },
   { key: 'instrumenty', title: 'Инструменты для фото', sub: 'Сжать · Сжать до N КБ · Изменить размер' },

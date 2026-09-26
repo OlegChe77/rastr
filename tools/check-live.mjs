@@ -41,6 +41,7 @@ for (const h of ['x-content-type-options', 'referrer-policy', 'strict-transport-
   ok(!!home.headers.get(h), 'заголовок ' + h, home.headers.get(h) || 'нет');
 }
 ok(/^frame-ancestors 'self' https:\/\/\*\.yandex\.ru/.test(home.headers.get('content-security-policy') || ''), 'во фреймы пускаются только сайт и Яндекс Метрика', home.headers.get('content-security-policy'));
+ok(!home.headers.get('x-frame-options'), 'X-Frame-Options не отдаётся (иначе не откроется Вебвизор)', home.headers.get('x-frame-options') || 'нет');
 ok(/metrika\.js\?v=[0-9a-f]+" data-id="\d+"/.test(html), 'Яндекс Метрика подключена в <head>');
 ok(/<meta http-equiv="Content-Security-Policy" content="default-src 'self'/.test(html), 'политика безопасности (CSP) встроена в страницу');
 ok(/id="counter"[^>]*data-host="/.test(html), 'счётчик посещений есть в подвале');

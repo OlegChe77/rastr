@@ -164,35 +164,69 @@ button { cursor: pointer; }
   box-shadow: var(--shadow-lg); overflow: hidden;
 }
 @media (max-width: 980px) { .app { grid-template-columns: 1fr; } }
-/* зона загрузки растягивается на высоту колонки настроек, пока очередь пуста */
 .work { padding: 20px; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
-.work > .drop { flex: 1 0 auto; }
 @media (min-width: 720px) { .work { padding: 24px; } }
 
+/* Зона загрузки — компактная строка. Файлы можно бросать в любое место окна,
+   поэтому большая мишень не нужна; когда файлы есть, строка сжимается ещё сильнее. */
 .drop {
-  position: relative; display: grid; place-items: center; text-align: center; cursor: pointer;
-  padding: 36px 20px; border-radius: 18px; border: 2px dashed var(--line-strong);
+  position: relative; display: block; cursor: pointer;
+  padding: 20px 22px; border-radius: 18px; border: 2px dashed var(--line-strong);
   background:
-    radial-gradient(120% 100% at 50% 0%, color-mix(in srgb, var(--accent) 5%, transparent), transparent 60%),
+    radial-gradient(120% 100% at 0% 0%, color-mix(in srgb, var(--accent) 6%, transparent), transparent 60%),
     var(--surface-2);
-  transition: border-color .2s, background-color .2s, transform .2s;
+  transition: border-color .2s, background-color .2s, transform .2s, padding .2s;
 }
 .drop:hover, .drop.over { border-color: var(--accent); background-color: var(--accent-soft); }
 .drop.over { transform: scale(1.01); }
 .drop input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.drop-in { display: flex; align-items: center; gap: 16px; }
 .drop-icon {
-  width: 56px; height: 56px; border-radius: 16px; display: grid; place-items: center; margin: 0 auto 12px;
+  width: 52px; height: 52px; border-radius: 16px; display: grid; place-items: center; flex: none;
   background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow-sm); color: var(--accent);
 }
-.drop-icon svg { width: 26px; height: 26px; }
-.drop-title { font-family: var(--f-display); font-weight: 700; font-size: clamp(18px, 2.4vw, 22px); letter-spacing: -.02em; line-height: 1.2; margin: 0 0 6px; }
-.drop-sub { color: var(--muted); margin: 0 0 16px; font-size: 14.5px; }
+.drop-icon svg { width: 24px; height: 24px; }
+.drop-text { flex: 1 1 auto; min-width: 0; }
+.drop-title { font-family: var(--f-display); font-weight: 700; font-size: clamp(17px, 2vw, 20px); letter-spacing: -.02em; line-height: 1.2; margin: 0 0 4px; }
+.drop-sub { color: var(--muted); margin: 0; font-size: 14px; }
 .drop-btn {
-  display: inline-flex; align-items: center; gap: 8px; padding: 11px 20px; border-radius: 999px;
+  display: inline-flex; align-items: center; gap: 8px; padding: 11px 20px; border-radius: 999px; flex: none;
   background: var(--ink); color: var(--bg); font-weight: 600; font-size: 15px; box-shadow: var(--shadow);
 }
 .drop:hover .drop-btn { background: var(--accent); color: var(--accent-ink); }
-.drop-formats { margin-top: 16px; color: var(--muted); max-width: 520px; line-height: 1.7; }
+.drop-formats { margin-top: 14px; padding-top: 12px; border-top: 1px dashed var(--line); color: var(--muted); line-height: 1.6; }
+.when-files { display: none; }
+
+/* файлы добавлены: одна узкая строка «Добавить ещё файлы» */
+.app.has-files .drop { padding: 10px 12px 10px 14px; border-width: 1.5px; }
+.app.has-files .when-empty, .app.has-files .drop-sub, .app.has-files .drop-formats { display: none; }
+.app.has-files .when-files { display: inline; }
+.app.has-files .drop-icon { width: 38px; height: 38px; border-radius: 12px; }
+.app.has-files .drop-icon svg { width: 18px; height: 18px; }
+.app.has-files .drop-title { font-size: 15px; margin: 0; }
+.app.has-files .drop-btn { padding: 8px 16px; font-size: 14px; box-shadow: none; }
+
+@media (max-width: 560px) {
+  .drop-in { flex-direction: column; text-align: center; gap: 12px; }
+  .drop-formats { text-align: center; }
+  .app.has-files .drop-in { flex-direction: row; text-align: left; }
+}
+
+/* пока файлов нет — подсказка, где они появятся (на широких экранах, где колонка настроек выше) */
+.queue-empty {
+  flex: 1 0 auto; display: flex; flex-direction: column; justify-content: flex-start; gap: 12px;
+  min-height: 220px; padding: 24px; border-radius: 18px; border: 1px solid var(--line);
+}
+.queue-empty .sk { display: flex; align-items: center; gap: 14px; }
+.queue-empty .sk i { width: 48px; height: 48px; border-radius: 12px; background: var(--surface-3); flex: none; }
+.queue-empty .sk b { height: 10px; border-radius: 6px; background: var(--surface-3); flex: 0 1 55%; }
+.queue-empty .sk:nth-child(2) b { flex-basis: 40%; }
+.queue-empty .sk:nth-child(3) b { flex-basis: 48%; }
+.queue-empty .sk:nth-child(2) { opacity: .75; }
+.queue-empty .sk:nth-child(3) { opacity: .5; }
+.queue-empty p { margin: 8px 0 0; color: var(--muted); font-size: 14px; text-align: center; }
+.app.has-files .queue-empty { display: none; }
+@media (max-width: 980px) { .queue-empty { display: none; } }
 
 .queue { border: 1px solid var(--line); border-radius: 18px; overflow: hidden; }
 .queue-head {

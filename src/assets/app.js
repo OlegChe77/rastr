@@ -231,6 +231,8 @@
       (done.length ? ' → ' + fmtSize(done.reduce((s, i) => s + i.result.blob.size, 0)) : '') : '';
     // пустую очередь не показываем: на экране остаётся только зона загрузки
     $('queue').hidden = n === 0;
+    // с файлами зона загрузки сворачивается в узкую строку «Добавить ещё файлы»
+    $('app').classList.toggle('has-files', n > 0);
     $('clear').hidden = n === 0;
     $('zip').disabled = done.length === 0 || state.busy;
     $('run').disabled = state.busy || !state.items.some(i => i.decoded);

@@ -51,6 +51,11 @@ test('страница открывается чистой: пустая оче�
   assert.equal(await page.locator('#queue').isVisible(), false, 'пустая очередь не показывается');
   assert.ok(await page.locator('#run').isDisabled(), 'без файлов конвертировать нечего');
   assert.equal(await page.locator('#plugin').count(), 0, 'блока с кодом для разработчиков нет');
+  // зона загрузки компактная, а место под очередь занимает подсказка
+  const dropH = await page.locator('#drop').evaluate(e => e.getBoundingClientRect().height);
+  assert.ok(dropH < 200, 'зона загрузки слишком большая: ' + Math.round(dropH) + ' px');
+  assert.ok(await page.locator('.queue-empty').isVisible(), 'подсказка «здесь появятся ваши файлы»');
+  assert.ok(await page.locator('#drop .when-empty').isVisible());
   assert.equal(await page.locator('#run').innerText(), 'Конвертировать в WEBP');
   assert.equal(await page.locator('#ref-body tr').count(), 14);
 });
@@ -59,6 +64,12 @@ test('файл конвертируется в PNG и скачивается', a
   const page = await openSite();
   await addPhoto(page);
   assert.ok(await page.locator('#queue').isVisible(), 'с файлом очередь появляется');
+  // с файлами зона загрузки — узкая строка «Добавить ещё файлы», подсказка исчезает
+  const barH = await page.locator('#drop').evaluate(e => e.getBoundingClientRect().height);
+  assert.ok(barH < 80, 'строка добавления слишком высокая: ' + Math.round(barH) + ' px');
+  assert.ok(await page.locator('#drop .when-files').isVisible(), 'надпись «Добавить ещё файлы»');
+  assert.equal(await page.locator('.queue-empty').isVisible(), false);
+  assert.equal(await page.locator('.drop-formats').isVisible(), false);
   await page.click('#fmts .fmt[data-id="png"]');
   await page.click('#run');
   await idle(page);

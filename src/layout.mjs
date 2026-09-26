@@ -156,15 +156,23 @@ export function converter() {
   <div class="work">
     <label class="drop" id="drop" for="file">
       <input type="file" id="file" multiple accept="image/*,.tga,.ppm,.pgm,.pbm,.pnm,.tif,.tiff,.heic,.heif,.avif,.ico,.svg">
-      <div>
+      <div class="drop-in">
         <div class="drop-icon">${ICONS.upload}</div>
-        <div class="drop-title">Перетащите изображения сюда</div>
-        <p class="drop-sub">Можно сразу несколько. Или вставьте из буфера: Ctrl+V</p>
+        <div class="drop-text">
+          <div class="drop-title"><span class="when-empty">Перетащите изображения сюда</span><span class="when-files">Добавить ещё файлы</span></div>
+          <p class="drop-sub">Можно сразу несколько, в любое место страницы. Или вставьте из буфера: Ctrl+V</p>
+        </div>
         <span class="drop-btn">Выбрать файлы</span>
-        <noscript><p class="err">Для работы конвертера включите JavaScript.</p></noscript>
-        <div class="drop-formats mono" id="in-list">Принимаем: PNG · JPEG · WEBP · AVIF · GIF · BMP · ICO · SVG · TIFF · HEIC · TGA · PPM/PGM/PBM</div>
       </div>
+      <noscript><p class="err">Для работы конвертера включите JavaScript.</p></noscript>
+      <div class="drop-formats mono" id="in-list">Принимаем: PNG · JPEG · WEBP · AVIF · GIF · BMP · ICO · SVG · TIFF · HEIC · TGA · PPM/PGM/PBM</div>
     </label>
+    <div class="queue-empty" aria-hidden="true">
+      <div class="sk"><i></i><b></b></div>
+      <div class="sk"><i></i><b></b></div>
+      <div class="sk"><i></i><b></b></div>
+      <p>Здесь появятся ваши файлы: каждый можно скачать отдельно или все сразу одним ZIP</p>
+    </div>
     <div class="queue ym-hide-content" id="queue" hidden>
       <div class="queue-head">
         <div class="q-title"><h2 id="q-title">Очередь</h2><span class="mono" id="q-summary"></span></div>

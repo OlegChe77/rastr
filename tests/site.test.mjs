@@ -311,7 +311,8 @@ test('главная — обзор сервиса: разделы, цифры, 
   assert.equal(await page.title(), 'Растр — онлайн-конвертер картинок и документов без сервера');
   assert.equal(await page.locator('#app').count(), 0, 'конвертера на главной нет');
   assert.equal(await page.locator('h1').innerText(), 'Онлайн-конвертер картинок и документов');
-  assert.deepEqual(await page.$$eval('.hero-cta a', a => a.map(x => x.getAttribute('href'))), ['/konverter-izobrazhenij/', '/dokumenty/']);
+  assert.deepEqual(await page.$$eval('.hero-cta a.btn.primary', a => a.map(x => x.getAttribute('href'))), ['/konverter-izobrazhenij/', '/dokumenty/', '/instrumenty/']);
+  assert.equal(await page.locator('.hero .chips').count(), 0, 'на главной нет плашек-преимуществ');
   assert.deepEqual(await page.$$eval('#sections .tools a', a => a.map(x => x.getAttribute('href'))), ['/konverter-izobrazhenij/', '/dokumenty/', '/instrumenty/']);
   assert.equal(await page.locator('.stats-row li').count(), 4);
   for (const id of ['how', 'why', 'popular', 'docs', 'tools', 'formats', 'faq']) assert.equal(await page.locator('#' + id).count(), 1, 'нет блока ' + id);

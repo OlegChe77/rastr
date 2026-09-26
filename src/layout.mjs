@@ -370,13 +370,14 @@ const APP_TAIL = `<dialog id="dlg" class="ym-hide-content" aria-labelledby="dlg-
 /* ---------------- общие блоки контента ---------------- */
 
 // cta — кнопки перехода в первом экране: [[href, текст, главная?], …]
-export function hero({ h1, lead, eyebrow = 'Бесплатно · без регистрации · без загрузки на сервер', chips = true, cta = null }) {
+// cta — кнопки-ссылки [адрес, надпись, иконка]; center — компактный заголовок по центру (главная)
+export function hero({ h1, lead, eyebrow = 'Бесплатно · без регистрации · без загрузки на сервер', chips = true, cta = null, center = false }) {
   const chipList = ['Файлы не покидают устройство', 'Пакетная обработка', 'Скачать всё одним ZIP'];
-  return `<section class="wrap hero">
+  return `<section class="wrap hero${center ? ' hero-center' : ''}">
   <span class="eyebrow"><i></i>${esc(eyebrow)}</span>
   <h1>${h1}</h1>
   <p class="lead">${lead}</p>
-  ${cta ? `<div class="hero-cta">${cta.map(([href, label, main]) => `<a class="btn${main ? ' primary' : ''}" href="${href}">${esc(label)}</a>`).join('')}</div>` : ''}
+  ${cta ? `<div class="hero-cta">${cta.map(([href, label, icon]) => `<a class="btn primary" href="${href}">${icon ? ICONS[icon] : ''}${esc(label)}</a>`).join('')}</div>` : ''}
   ${chips ? `<ul class="chips">${chipList.map(c => `<li>${ICONS.check}${c}</li>`).join('')}</ul>` : ''}
 </section>`;
 }

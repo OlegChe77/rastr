@@ -116,7 +116,8 @@ export function getPages(site, formats) {
     body: `${hero({
       h1: 'Онлайн-конвертер картинок и документов',
       lead: 'Растр переводит файлы между форматами прямо в браузере: фото с iPhone в JPG, PNG в WEBP, PDF в Word, Word в PDF, Excel в CSV. Сжимает фото до нужного веса и меняет размер. Бесплатно, без регистрации — и файлы не покидают ваше устройство.',
-      cta: [['/konverter-izobrazhenij/', 'Конвертировать картинки', true], ['/dokumenty/', 'Конвертировать документы']]
+      cta: [['/konverter-izobrazhenij/', 'Конвертировать картинки', 'image'], ['/dokumenty/', 'Конвертировать документы', 'doc'], ['/instrumenty/', 'Инструменты для фото', 'wrench']],
+      chips: false, center: true
     })}
 ${section('sections', 'Что умеет Растр', 'Три раздела — выберите нужный или сразу страницу под задачу ниже.', toolsGrid(SECTIONS))}
 <section class="wrap">${STATS}</section>

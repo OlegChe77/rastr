@@ -209,7 +209,7 @@ test('на сайте нет данных владельца', () => {
 });
 
 // Какой формат ожидаем увидеть выбранным
-const LABEL = { jpeg: 'JPG', png: 'PNG', webp: 'WEBP', pdf: 'PDF', ico: 'ICO' };
+const LABEL = { jpeg: 'JPG', png: 'PNG', webp: 'WEBP', pdf: 'PDF', ico: 'ICO', keep: 'Как было' };
 for (const l of landings) {
   test(`/${l.slug}/ открывает конвертер с настройками страницы`, async () => {
     const context = await browser.newContext();
@@ -222,7 +222,8 @@ for (const l of landings) {
       await page.locator('#fmts .fmt').first().waitFor();
       const f = l.preset.format;
       assert.equal(await page.locator(`#fmts .fmt[data-id="${f}"]`).getAttribute('aria-pressed'), 'true');
-      assert.equal(await page.locator('#run').innerText(), 'Конвертировать в ' + LABEL[f]);
+      assert.equal(await page.locator('#run').innerText(), l.preset.runLabel || 'Конвертировать в ' + LABEL[f]);
+      if (l.preset.formats) assert.deepEqual(await page.$$eval('#fmts .fmt', b => b.map(x => x.dataset.id)), l.preset.formats, 'инструмент показывает только свои форматы');
       assert.equal(await page.locator('.row').count(), 0, 'примеров в очереди нет');
       if (l.preset.quality) assert.equal(await page.locator('#quality').inputValue(), String(Math.round(l.preset.quality * 100)));
       if (l.preset.resize) assert.equal(await page.locator('#resize-mode').inputValue(), l.preset.resize.mode);

@@ -18,7 +18,7 @@ for (const p of pages) p.url = p.url.replace('//', '/');
 
 const clean = s => s.replace(/<[^>]+>/g, ' ').replace(/&[a-z]+;/g, ' ').replace(/\s+/g, ' ').trim();
 // только основное содержимое, без шапки, подвала и блоков-ссылок
-const main = html => html.split('<main id="main">')[1].split('</main>')[0].replace(/<ul class="links">[\s\S]*?<\/ul>/g, '').replace(/<section class="app"[\s\S]*?<\/section>/g, '');
+const main = html => html.split('<main id="main">')[1].split('</main>')[0].replace(/<ul class="(links|tools)">[\s\S]*?<\/ul>/g, '').replace(/<section class="app"[\s\S]*?<\/section>/g, '');
 
 function report(title, pick, minLen = 40) {
   const seen = new Map();
@@ -37,6 +37,6 @@ total += report('Одинаковые абзацы и пункты списко�
 total += report('Одинаковые вопросы FAQ', h => [...h.matchAll(/<summary>([\s\S]*?)<\/summary>/g)].map(m => m[1]), 5);
 total += report('Одинаковые ответы FAQ', h => [...h.matchAll(/<div class="ans">([\s\S]*?)<\/div>/g)].map(m => m[1]));
 total += report('Одинаковые подзаголовки H2 (кроме служебных)', h => [...h.matchAll(/<h2[^>]*>([\s\S]*?)<\/h2>/g)].map(m => m[1])
-  .filter(t => !/Очередь|Вопросы и ответы|Частые вопросы|Другие конвертеры|Все конвертеры|Популярные конвертеры|Готовые конвертеры/.test(t)), 5);
+  .filter(t => !/Очередь|Вопросы и ответы|Частые вопросы|Другие конвертеры|Все конвертеры|Популярные конвертеры|Готовые конвертеры|Конвертеры форматов|Другие инструменты|Инструменты для фото/.test(t)), 5);
 console.log(`\nВсего групп дублей: ${total}`);
 process.exitCode = total ? 1 : 0;

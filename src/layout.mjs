@@ -1,5 +1,5 @@
 // Шаблоны страниц: <head> с SEO-разметкой, шапка, хлебные крошки, конвертер, подвал.
-import { landings } from './content/landings.mjs';
+import { landings, tools, converters } from './content/landings.mjs';
 
 export const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const stripTags = s => String(s).replace(/<[^>]+>/g, '');
@@ -12,14 +12,19 @@ const ICONS = {
   layers: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 2 10 5-10 5L2 7z"/><path d="m2 17 10 5 10-5M2 12l10 5 10-5"/></svg>',
   gift: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12v10H4V12M2 7h20v5H2zM12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>',
   check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5L20 7"/></svg>',
+  // иконки инструментов: сжатие (стрелки внутрь), вес с отметкой лимита, размер (рамка со стрелками наружу)
+  compress: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7"/></svg>',
+  target: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 20h12l-1.5-9h-9z"/><path d="M9 11a3 3 0 0 1 6 0"/><path d="M4 5h16"/><path d="M12 5v3"/></svg>',
+  resize: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="10" height="10" rx="1.5"/><path d="M17 7h4v4M21 7l-6 6M7 17v4h4M7 21l6-6"/></svg>',
   upload: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4m0 0L7 9m5-5 5 5"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>'
 };
 export { ICONS };
 
 export const NAV = [
   { href: '/', label: 'Конвертер' },
-  { href: '/formaty/', label: 'Форматы' },
-  { href: '/instrukciya/', label: 'Инструкция', cls: 'hide-xs' }
+  { href: '/instrumenty/', label: 'Инструменты' },
+  { href: '/formaty/', label: 'Форматы', cls: 'hide-xs' },
+  { href: '/instrukciya/', label: 'Инструкция', cls: 'hide-sm' }
 ];
 
 /* ---------------- <head> ---------------- */
@@ -130,9 +135,9 @@ function footer(site) {
   const counter = site.counter
     ? `<span class="counter" id="counter" hidden data-host="${esc(host)}" data-src="https://hits.sh/${esc(encodeURIComponent(key))}.svg?view=today-total&amp;label=%D0%9F%D0%BE%D1%81%D0%B5%D1%89%D0%B5%D0%BD%D0%B8%D0%B9&amp;style=flat-square&amp;color=0f1320&amp;labelColor=5e6679"></span>`
     : '';
-  const half = Math.ceil(landings.length / 2);
   const col = (title, items) => `<div class="foot-col"><h2>${title}</h2><ul>${items.map(([href, label]) => `<li><a href="${href}">${esc(label)}</a></li>`).join('')}</ul></div>`;
-  const conv = landings.map(l => [`/${l.slug}/`, plainCard(l)]);
+  const conv = converters.map(l => [`/${l.slug}/`, plainCard(l)]);
+  const tl = tools.map(l => [`/${l.slug}/`, l.card[0]]).concat([['/instrumenty/', 'Все инструменты']]);
   return `<footer class="site-foot">
   <div class="wrap">
     <div class="foot-grid">
@@ -140,8 +145,8 @@ function footer(site) {
         <a class="logo" href="/" aria-label="Растр, на главную">${LOGO_MARK}<b>Растр</b></a>
         <p>Бесплатный конвертер изображений, который работает прямо в браузере. Файлы не покидают ваше устройство.</p>
       </div>
-      ${col('Конвертеры', conv.slice(0, half))}
-      ${col('Ещё', conv.slice(half))}
+      ${col('Конвертеры', conv)}
+      ${col('Инструменты', tl)}
       ${col('Сервис', [['/formaty/', 'Форматы изображений'], ['/instrukciya/', 'Инструкция'], ['/konfidencialnost/', 'Конфиденциальность'], ['/usloviya/', 'Условия использования'], ['/licenzii/', 'Лицензии']])}
     </div>
     <div class="foot-bottom"><span>© 2026 Растр</span>${counter}<span>Файлы обрабатываются локально, без загрузки на сервер</span></div>
@@ -182,17 +187,17 @@ export function converter() {
     </div>
   </div>
   <aside class="settings" aria-label="Настройки конвертации">
-    <div class="sec">
+    <div class="sec" id="sec-format">
       <div class="sec-head"><span class="label">Формат на выходе</span><span class="label" title="Формат поддерживает прозрачность">▦ прозрачность</span></div>
       <div class="fmts" id="fmts" role="group" aria-label="Формат"></div>
       <p class="hint" id="fmt-use"></p>
     </div>
-    <div class="sec" data-opt="quality">
+    <div class="sec" id="sec-quality" data-opt="quality">
       <div class="sec-head"><label class="label" for="quality">Качество</label><span class="qv" id="quality-v">85%</span></div>
       <input type="range" id="quality" min="10" max="100" value="85">
     </div>
-    <div class="sec" data-opt="quality">
-      <label class="check"><input type="checkbox" id="target-on"> Сжать до размера файла</label>
+    <div class="sec" id="sec-target" data-opt="quality">
+      <label class="check target-toggle"><input type="checkbox" id="target-on"> Сжать до размера файла</label>
       <div class="target" id="target-fields" hidden>
         <div class="inline" style="flex-wrap:nowrap">
           <input type="number" id="target-kb" min="5" max="51200" step="1" value="200" aria-label="Максимальный размер файла, КБ">
@@ -223,7 +228,7 @@ export function converter() {
     <div class="sec" data-opt="pdf">
       <label class="check"><input type="checkbox" id="pdf-single"> Собрать все картинки в один PDF</label>
     </div>
-    <div class="sec">
+    <div class="sec" id="sec-size">
       <label class="label" for="resize-mode">Размер</label>
       <select id="resize-mode">
         <option value="none">Как в оригинале</option>
@@ -240,7 +245,7 @@ export function converter() {
       </div>
       <p class="hint mono" id="resize-hint"></p>
     </div>
-    <div class="sec">
+    <div class="sec" id="sec-rotate">
       <span class="label">Поворот и отражение</span>
       <div class="seg" id="rotate" role="group" aria-label="Поворот">
         <button type="button" data-rot="0" aria-pressed="true">0°</button>
@@ -297,6 +302,12 @@ export function faqSchema(items) {
     '@context': 'https://schema.org', '@type': 'FAQPage',
     mainEntity: items.map(f => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: stripTags(f.a) } }))
   };
+}
+
+// Карточки инструментов: крупнее, с иконкой и описанием
+export function toolsGrid(list, currentSlug) {
+  return `<ul class="tools">${list.map(l => `<li><a href="/${l.slug}/"${l.slug === currentSlug ? ' aria-current="page"' : ''}>`+
+    `<span class="tool-ic">${ICONS[l.icon]}</span><b>${esc(l.card[0])}</b><small>${esc(l.card[2])}</small><span class="tool-go">Открыть →</span></a></li>`).join('')}</ul>`;
 }
 
 export function linksGrid(list, currentSlug) {

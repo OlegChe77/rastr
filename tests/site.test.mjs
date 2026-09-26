@@ -195,12 +195,45 @@ test('сжатие до 200 КБ: тяжёлое фото укладываетс
   assert.ok(f.data.length <= 200000, 'вес ' + f.data.length + ' байт');
   assert.ok(f.data.length > 120000, 'не пережато: ' + f.data.length + ' байт');
 
-  // кнопка «1 МБ» меняет лимит, выключенная галочка возвращает ручное качество
+  // кнопка «1 МБ» меняет лимит; в этом инструменте лимит включён всегда, ползунка качества нет
   await page.click('#target-chips button[data-kb="1000"]');
   assert.equal(await page.locator('#target-kb').inputValue(), '1000');
+  assert.equal(await page.locator('#target-on').isVisible(), false, 'галочка скрыта: лимит включён всегда');
+  assert.equal(await page.locator('#sec-quality').isVisible(), false, 'ползунок качества скрыт');
+  assert.equal(await page.locator('#run').innerText(), 'Сжать до размера');
+  assert.deepEqual(await page.$$eval('#fmts .fmt', b => b.map(x => x.dataset.id)), ['jpeg', 'webp', 'avif']);
+
+  // на главной сжатие до размера — обычная галочка, её можно выключить
+  await page.goto(server.url + '/');
+  await page.click('#fmts .fmt[data-id="jpeg"]');
+  await page.check('#target-on');
+  assert.equal(await page.locator('#quality-v').innerText(), 'авто');
   await page.uncheck('#target-on');
   assert.equal(await page.locator('#quality').isDisabled(), false);
   assert.match(await page.locator('#quality-v').innerText(), /^\d+%$/);
+});
+
+test('инструмент «Размер фото»: формат «Как было» сохраняет формат исходника', async () => {
+  context = await browser.newContext({ acceptDownloads: true });
+  const page = await context.newPage();
+  errors = [];
+  page.on('pageerror', e => errors.push(e.message));
+  await page.goto(server.url + '/izmenit-razmer-foto/');
+  assert.equal(await page.locator('#run').innerText(), 'Изменить размер');
+  assert.equal(await page.locator('#fmts .fmt[data-id="keep"]').getAttribute('aria-pressed'), 'true');
+  // в этом инструменте блок размера стоит первым в панели настроек
+  const [sizeTop, formatTop] = await page.evaluate(() => ['sec-size', 'sec-format'].map(id => document.getElementById(id).getBoundingClientRect().top));
+  assert.ok(sizeTop < formatTop, 'размер выше формата');
+
+  await page.setInputFiles('#file', [fixtures()[0], fixtures()[2]]);
+  await idle(page);
+  await page.click('#run');
+  await idle(page);
+  const texts = await page.locator('.row').allInnerTexts();
+  assert.match(texts.find(t => t.includes('красный')), /→\s*BMP\s+800×600/);
+  assert.match(texts.find(t => t.includes('логотип')), /→\s*PNG\s+800×400/);
+  const z = await download(page, () => page.click('#zip'));
+  assert.deepEqual(zipEntries(z.data).sort(), ['красный.bmp', 'логотип.png']);
 });
 
 test('все картинки собираются в один PDF', async () => {

@@ -117,6 +117,7 @@ button { cursor: pointer; }
   .logo svg { width: 30px; height: 30px; }
 }
 /* на узких экранах «Инструкция» не помещается в шапку; она остаётся в подвале */
+@media (max-width: 640px) { .menu a.hide-sm { display: none; } }
 @media (max-width: 480px) { .menu a.hide-xs { display: none; } }
 
 /* ================= хлебные крошки ================= */
@@ -526,3 +527,31 @@ pre .s { color: #7FD8F0; }
 }
 .cookie-bar p { margin: 0; flex: 1 1 260px; color: var(--ink-2); }
 .cookie-bar .btn { flex: none; }
+
+/* ---------- инструменты: карточки ---------- */
+.tools { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; list-style: none; padding: 0; margin: 0; }
+.tools a {
+  display: grid; gap: 6px; align-content: start; height: 100%; padding: 22px; border-radius: var(--r-lg);
+  background: var(--surface); border: 1px solid var(--line); color: var(--ink); text-decoration: none;
+  transition: border-color .15s, transform .15s, box-shadow .15s;
+}
+.tools a:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: var(--shadow); }
+.tools a[aria-current="page"] { border-color: var(--ink); }
+.tools b { font-family: var(--f-display); font-weight: 700; font-size: 18px; letter-spacing: -.02em; }
+.tools small { color: var(--muted); font-size: 14.5px; }
+.tools .tool-go { margin-top: 8px; font-size: 14px; font-weight: 600; color: var(--accent); }
+.tool-ic { width: 46px; height: 46px; border-radius: 14px; display: grid; place-items: center; margin-bottom: 6px; }
+.tool-ic svg { width: 22px; height: 22px; }
+.tools li:nth-child(3n+1) .tool-ic { background: color-mix(in srgb, var(--magenta) 14%, transparent); color: var(--magenta); }
+.tools li:nth-child(3n+2) .tool-ic { background: color-mix(in srgb, var(--cyan) 14%, transparent); color: var(--cyan); }
+.tools li:nth-child(3n+3) .tool-ic { background: color-mix(in srgb, var(--yellow) 20%, transparent); color: color-mix(in srgb, var(--yellow) 70%, var(--ink)); }
+
+/* ---------- инструменты: режим панели настроек ---------- */
+/* «Размер фото»: размер и поворот — первыми */
+.tool-resize #sec-size, .tool-resize #sec-rotate { order: -1; }
+/* «Сжать до N КБ»: лимит включён всегда, ползунок качества не нужен */
+.tool-target #sec-quality, .tool-target .target-toggle { display: none !important; }
+.tool-target #sec-target { order: -1; }
+.tool-target #sec-target .target { gap: 12px; }
+/* в инструментах форматов мало — кнопки в ряд */
+.app[class*="tool-"] .fmts { grid-template-columns: repeat(auto-fill, minmax(124px, 1fr)); }

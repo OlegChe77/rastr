@@ -1,9 +1,10 @@
 // Все страницы сайта. Каждая: путь, title, description, ключевые слова, тело и разметка schema.org.
-import { landings } from './content/landings.mjs';
+import { landings, tools, converters } from './content/landings.mjs';
 import { formatInfo } from './content/formats.mjs';
-import { esc, converter, hero, faqHtml, faqSchema, linksGrid, steps, crumbsSchema, cardTitle, ICONS } from './layout.mjs';
+import { esc, converter, hero, faqHtml, faqSchema, linksGrid, toolsGrid, steps, crumbsSchema, cardTitle, ICONS } from './layout.mjs';
 
 const HOME = { name: 'Главная', path: '/' };
+const TOOLS_CRUMB = { name: 'Инструменты', path: '/instrumenty/' };
 
 function webApp(site, name, path, description) {
   return {
@@ -77,7 +78,8 @@ export function getPages(site, formats) {
     body: `${hero({ h1: 'Конвертер изображений онлайн', lead: 'Переводите картинки между 14 форматами прямо в браузере: PNG, JPG, WEBP, HEIC с iPhone, AVIF, PDF, ICO и другие. Меняйте размер, качество и ориентацию — пачкой и без загрузки файлов на сервер.' })}
 <div class="wrap">${converter()}</div>
 ${section('how', 'Как конвертировать изображение', 'Три шага, без регистрации и установки программ.', HOW)}
-${section('popular', 'Популярные конвертеры', 'Страницы с готовыми настройками под частые задачи.', linksGrid(landings))}
+${section('tools', 'Инструменты для фото', 'Отдельные сервисы под частые задачи: уменьшить вес, уложиться в лимит сайта, поменять размер.', toolsGrid(tools))}
+${section('popular', 'Конвертеры форматов', 'Страницы с готовыми настройками под частые пары форматов.', linksGrid(converters))}
 ${section('why', 'Почему Растр', null, FEATURES)}
 ${section('formats', 'Какой формат выбрать', 'Нажмите на строку, чтобы выбрать формат в конвертере. Подробнее о каждом — в <a href="/formaty/">справочнике форматов</a>.', formatsTable(formats))}
 ${section('faq', 'Частые вопросы', null, faqHtml(HOME_FAQ))}`
@@ -87,7 +89,8 @@ ${section('faq', 'Частые вопросы', null, faqHtml(HOME_FAQ))}`
   for (const l of landings) {
     const path = `/${l.slug}/`;
     const name = l.card[1] ? `${l.card[0]} в ${l.card[1]}` : l.card[0];
-    const crumbs = [HOME, { name, path }];
+    const isTool = l.kind === 'tool';
+    const crumbs = isTool ? [HOME, TOOLS_CRUMB, { name, path }] : [HOME, { name, path }];
     const related = l.related.map(s => landings.find(x => x.slug === s)).filter(Boolean);
     pages.push({
       path, file: `${l.slug}/index.html`, ogKey: l.slug, priority: '0.9', changefreq: 'monthly',
@@ -100,7 +103,48 @@ ${section('faq', 'Частые вопросы', null, faqHtml(HOME_FAQ))}`
 ${l.sections.map(s => `<h2>${esc(s.h)}</h2>${s.html}`).join('\n')}
 </div></section>
 ${section('faq', 'Вопросы и ответы', null, faqHtml(l.faq))}
-${section('more', 'Другие конвертеры', null, linksGrid(related.concat(landings.filter(x => x !== l && !related.includes(x)).slice(0, 4))))}`
+${isTool
+  ? section('more', 'Другие инструменты', null, toolsGrid(tools.filter(x => x !== l))) + '\n' + section('conv', 'Конвертеры форматов', null, linksGrid(converters.slice(0, 8)))
+  : section('more', 'Другие конвертеры', null, linksGrid(related.concat(landings.filter(x => x !== l && !related.includes(x)).slice(0, 4))))}`
+    });
+  }
+
+  /* ---------- раздел «Инструменты» ---------- */
+  {
+    const path = '/instrumenty/';
+    const crumbs = [HOME, TOOLS_CRUMB];
+    const desc = 'Бесплатные инструменты для фото: сжать фото, сжать до 200 КБ или 1 МБ, изменить размер в пикселях. Работают в браузере, файлы не загружаются на сервер.';
+    const faq = [
+      { q: 'Чем «Сжать фото» отличается от «Сжать до N КБ»?', a: 'В первом вы сами выбираете качество и максимальный размер в пикселях, а итоговый вес зависит от снимка. Во втором задаёте вес, например 200 КБ, и Растр сам подбирает качество и размер так, чтобы файл точно в него уложился.' },
+      { q: 'Можно ли сначала изменить размер, а потом сжать?', a: 'Да, и отдельных шагов не нужно: в каждом инструменте есть блок «Размер». Например, в «Сжать до N КБ» можно сразу вписать фото в 1600 пикселей и задать лимит 300 КБ.' },
+      { q: 'Инструменты тоже работают без загрузки на сервер?', a: 'Да. Сжатие и изменение размера выполняются в вашем браузере так же, как конвертация форматов.' }
+    ];
+    pages.push({
+      path, file: 'instrumenty/index.html', ogKey: 'instrumenty', priority: '0.8', changefreq: 'monthly', crumbs,
+      title: 'Инструменты для фото онлайн: сжать и изменить размер | Растр',
+      description: desc,
+      keywords: 'инструменты для фото онлайн, сжать фото, изменить размер фото, сжать фото до кб, уменьшить фото онлайн',
+      schema: [crumbsSchema(site, crumbs), faqSchema(faq), {
+        '@context': 'https://schema.org', '@type': 'ItemList', name: 'Инструменты для фото',
+        itemListElement: tools.map((l, i) => ({ '@type': 'ListItem', position: i + 1, name: l.card[0], url: site.url + '/' + l.slug + '/' }))
+      }],
+      body: `${hero({ h1: 'Инструменты для фото', lead: 'Три отдельных сервиса для задач, где формат менять не нужно: уменьшить вес снимка, уложиться в ограничение сайта или подогнать размер в пикселях.', chips: false })}
+<section class="wrap">${toolsGrid(tools)}</section>
+<section class="wrap section"><div class="prose">
+  <h2>Какой инструмент выбрать</h2>
+  <div class="card table-wrap"><table>
+    <thead><tr><th>Задача</th><th>Инструмент</th></tr></thead>
+    <tbody>
+      <tr><td>Фото не отправляется по почте или долго грузится</td><td><a href="/szhat-foto/">Сжать фото</a></td></tr>
+      <tr><td>Сайт пишет «файл не должен превышать 200 КБ»</td><td><a href="/szhat-foto-do-kb/">Сжать до N КБ</a></td></tr>
+      <tr><td>Нужна картинка ровно 1080 пикселей по ширине</td><td><a href="/izmenit-razmer-foto/">Изменить размер фото</a></td></tr>
+      <tr><td>Нужно поменять формат, например HEIC на JPG</td><td><a href="/">Конвертер форматов</a></td></tr>
+    </tbody>
+  </table></div>
+  <p>Все инструменты принимают те же 12 форматов, что и конвертер, обрабатывают сразу много файлов и отдают результат одним ZIP-архивом. Настройки размера, поворота и фона для прозрачных мест есть в каждом из них.</p>
+</div></section>
+${section('faq', 'Вопросы об инструментах', null, faqHtml(faq))}
+${section('conv', 'Конвертеры форматов', null, linksGrid(converters))}`
     });
   }
 

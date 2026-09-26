@@ -55,7 +55,21 @@
   const fmts = R.formats();
   $('in-list').textContent = 'Принимаем: ' + R.inputs.join(' · ');
 
-  $('fmts').innerHTML = fmts.map(f =>
+  // «Как было»: каждый файл сохраняется в формате исходника (инструмент «Размер фото» и др.)
+  const KEEP = { id: 'keep', label: 'Как было', note: 'Формат исходника', lossy: false, alpha: true, options: ['quality'],
+    use: 'Каждый файл сохранится в своём формате: JPG останется JPG, PNG — PNG', supported: () => true };
+  const SOURCE_FORMAT = { PNG: 'png', JPEG: 'jpeg', WEBP: 'webp', AVIF: 'avif', GIF: 'gif', BMP: 'bmp', TIFF: 'tiff', TGA: 'tga', ICO: 'png', SVG: 'png', HEIC: 'jpeg', PNM: 'png' };
+  function keepFormat(item) {
+    const f = R.format(SOURCE_FORMAT[item.decoded.format] || 'png');
+    return f.supported() ? f : R.format(f.id === 'avif' ? 'webp' : 'png');
+  }
+  const fmtById = id => id === 'keep' ? KEEP : R.format(id);
+  // инструменты показывают только форматы, которые подходят к задаче
+  const shown = preset.formats ? preset.formats.map(fmtById).filter(Boolean) : fmts;
+  const runLabel = f => preset.runLabel || 'Конвертировать в ' + f.label;
+  if (preset.tool) $('app').classList.add('tool-' + preset.tool);
+
+  $('fmts').innerHTML = shown.map(f =>
     '<button type="button" class="fmt" data-id="' + f.id + '" aria-pressed="false"' +
     (f.supported() ? '' : ' disabled title="Этот браузер не умеет кодировать ' + f.label + '"') + '>' +
     '<span class="fmt-ext">' + f.label + '</span><span class="fmt-note">' + esc(f.note) + '</span>' +
@@ -72,14 +86,14 @@
   }
 
   function setFormat(id, remember) {
-    const f = R.format(id);
+    const f = fmtById(id);
     if (!f || !f.supported()) return false;
     state.format = id;
     document.querySelectorAll('.fmt').forEach(b => b.setAttribute('aria-pressed', b.dataset.id === id));
     if (refBody) refBody.querySelectorAll('tr').forEach(r => r.setAttribute('aria-selected', r.dataset.id === id));
     document.querySelectorAll('[data-opt]').forEach(s => { s.hidden = !f.options.includes(s.dataset.opt); });
     $('fmt-use').textContent = f.use + '.';
-    $('run').textContent = 'Конвертировать в ' + f.label;
+    $('run').textContent = runLabel(f);
     if (remember) { try { localStorage.setItem('rastr.format', id); } catch (e) {} }
     updateSummary();
     return true;
@@ -260,11 +274,11 @@
   /* ---------- convert ---------- */
   async function run() {
     if (state.busy) return;
-    const f = R.format(state.format), o = opts();
+    const f = fmtById(state.format), o = opts();
     const items = state.items.filter(i => i.decoded);
     if (!items.length) return;
     state.busy = true; updateSummary();
-    $('run').textContent = 'Конвертируем…';
+    $('run').textContent = preset.runLabel ? 'Обрабатываем…' : 'Конвертируем…';
     const single = f.id === 'pdf' && $('pdf-single').checked;
     const pages = [];
     let ok = 0;
@@ -273,15 +287,16 @@
       await new Promise(r => setTimeout(r, 16));
       try {
         const canvas = R.prepare(item.decoded, o);
+        const fi = f.id === 'keep' ? keepFormat(item) : f;
         if (single) { pages.push(canvas); item.status = 'ready'; }
         else {
           let blob, w = canvas.width, h = canvas.height, fit = null;
-          if (o.targetBytes && f.lossy) {
-            const r = await R.encodeToSize(canvas, f.id, o.targetBytes, o);
+          if (o.targetBytes && fi.lossy) {
+            const r = await R.encodeToSize(canvas, fi.id, o.targetBytes, o);
             blob = r.blob; w = r.width; h = r.height;
             fit = { limit: o.targetBytes, reached: r.reached, quality: r.quality, scaled: r.scaled };
-          } else blob = await R.encode(canvas, f.id, o);
-          item.result = { blob, name: R.outputName(item.name, f.id), width: w, height: h, format: f, fit };
+          } else blob = await R.encode(canvas, fi.id, o);
+          item.result = { blob, name: R.outputName(item.name, fi.id), width: w, height: h, format: fi, fit };
           item.status = 'done';
         }
         ok++;
@@ -297,10 +312,10 @@
         toast('Собран PDF на ' + pages.length + ' ' + plural(pages.length, 'страницу', 'страницы', 'страниц') + ' · ' + fmtSize(blob.size));
       } catch (err) { toast('PDF не собрался: ' + err.message); }
     } else if (ok) {
-      toast('Готово: ' + ok + ' ' + plural(ok, 'файл', 'файла', 'файлов') + ' в ' + f.label);
+      toast('Готово: ' + ok + ' ' + plural(ok, 'файл', 'файла', 'файлов') + (f.id === 'keep' ? '' : ' в ' + f.label));
     }
     state.busy = false;
-    $('run').textContent = 'Конвертировать в ' + f.label;
+    $('run').textContent = runLabel(f);
     updateSummary();
   }
   $('run').addEventListener('click', run);

@@ -63,6 +63,54 @@ services:
         source: /izmenit-razmer-foto
         destination: /izmenit-razmer-foto/
       - type: redirect
+        source: /dokumenty
+        destination: /dokumenty/
+      - type: redirect
+        source: /pdf-v-jpg
+        destination: /pdf-v-jpg/
+      - type: redirect
+        source: /pdf-v-png
+        destination: /pdf-v-png/
+      - type: redirect
+        source: /pdf-v-word
+        destination: /pdf-v-word/
+      - type: redirect
+        source: /pdf-v-txt
+        destination: /pdf-v-txt/
+      - type: redirect
+        source: /obedinit-pdf
+        destination: /obedinit-pdf/
+      - type: redirect
+        source: /razdelit-pdf
+        destination: /razdelit-pdf/
+      - type: redirect
+        source: /word-v-pdf
+        destination: /word-v-pdf/
+      - type: redirect
+        source: /word-v-txt
+        destination: /word-v-txt/
+      - type: redirect
+        source: /word-v-html
+        destination: /word-v-html/
+      - type: redirect
+        source: /txt-v-pdf
+        destination: /txt-v-pdf/
+      - type: redirect
+        source: /txt-v-word
+        destination: /txt-v-word/
+      - type: redirect
+        source: /markdown-v-html
+        destination: /markdown-v-html/
+      - type: redirect
+        source: /markdown-v-pdf
+        destination: /markdown-v-pdf/
+      - type: redirect
+        source: /excel-v-csv
+        destination: /excel-v-csv/
+      - type: redirect
+        source: /csv-v-excel
+        destination: /csv-v-excel/
+      - type: redirect
         source: /instrumenty
         destination: /instrumenty/
       - type: redirect

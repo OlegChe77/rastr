@@ -1,5 +1,6 @@
 // Шаблоны страниц: <head> с SEO-разметкой, шапка, хлебные крошки, конвертер, подвал.
 import { landings, tools, converters } from './content/landings.mjs';
+import { documents } from './content/documents.mjs';
 
 export const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const stripTags = s => String(s).replace(/<[^>]+>/g, '');
@@ -21,7 +22,8 @@ const ICONS = {
 export { ICONS };
 
 export const NAV = [
-  { href: '/', label: 'Конвертер' },
+  { href: '/', label: 'Картинки' },
+  { href: '/dokumenty/', label: 'Документы' },
   { href: '/instrumenty/', label: 'Инструменты' },
   { href: '/formaty/', label: 'Форматы', cls: 'hide-xs' },
   { href: '/instrukciya/', label: 'Инструкция', cls: 'hide-sm' }
@@ -40,14 +42,21 @@ export const METRIKA_HOSTS = ['ru', 'az', 'by', 'co.il', 'com', 'com.am', 'com.g
 const METRIKA_HTTPS = METRIKA_HOSTS.map(h => 'https://' + h).join(' ');
 const METRIKA_WSS = METRIKA_HOSTS.map(h => 'wss://' + h).join(' ');
 
+// Библиотеки конвертера документов (rastr-docs.js) — конкретные версии, не весь CDN
+const DOC_LIBS = ['pdfjs-dist@3.11.174/', 'pdf-lib@1.17.1/', '@pdf-lib/fontkit@1.1.1/', 'mammoth@1.8.0/', 'docx@8.5.0/', 'marked@12.0.2/']
+  .map(p => 'https://cdn.jsdelivr.net/npm/' + p).concat('https://cdn.sheetjs.com/xlsx-0.20.3/').join(' ');
+// Что конвертер документов скачивает через fetch: Worker и данные pdf.js, шрифт PT Sans для создаваемых PDF
+const DOC_DATA = ['pdfjs-dist@3.11.174/', '@expo-google-fonts/pt-sans@0.2.3/'].map(p => 'https://cdn.jsdelivr.net/npm/' + p).join(' ');
+
 export const CSP = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-eval' https://cdn.jsdelivr.net/npm/pako@1.0.11/ https://cdn.jsdelivr.net/npm/utif@3.1.0/ https://cdn.jsdelivr.net/npm/heic2any@0.0.4/ " + METRIKA_HTTPS,
+  "script-src 'self' 'unsafe-eval' https://cdn.jsdelivr.net/npm/pako@1.0.11/ https://cdn.jsdelivr.net/npm/utif@3.1.0/ https://cdn.jsdelivr.net/npm/heic2any@0.0.4/ " + DOC_LIBS + ' ' + METRIKA_HTTPS,
   "worker-src 'self' blob:",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-  "font-src https://fonts.gstatic.com",
+  // data: — шрифты, встроенные в открываемые PDF; standard_fonts — стандартные шрифты pdf.js для PDF без встроенных
+  "font-src https://fonts.gstatic.com data: https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/standard_fonts/",
   "img-src 'self' data: blob: https://hits.sh " + METRIKA_HTTPS,
-  "connect-src 'self' blob: data: " + METRIKA_HTTPS + ' ' + METRIKA_WSS,
+  "connect-src 'self' blob: data: " + DOC_DATA + ' ' + METRIKA_HTTPS + ' ' + METRIKA_WSS,
   "frame-src 'self' " + METRIKA_HTTPS,
   "object-src 'none'",
   "base-uri 'self'",
@@ -137,6 +146,7 @@ function footer(site) {
     : '';
   const col = (title, items) => `<div class="foot-col"><h2>${title}</h2><ul>${items.map(([href, label]) => `<li><a href="${href}">${esc(label)}</a></li>`).join('')}</ul></div>`;
   const conv = converters.map(l => [`/${l.slug}/`, plainCard(l)]);
+  const dl = documents.map(d => [`/${d.slug}/`, plainCard(d)]).concat([['/dokumenty/', 'Все документы']]);
   const tl = tools.map(l => [`/${l.slug}/`, l.card[0]]).concat([['/instrumenty/', 'Все инструменты']]);
   return `<footer class="site-foot">
   <div class="wrap">
@@ -145,7 +155,8 @@ function footer(site) {
         <a class="logo" href="/" aria-label="Растр, на главную">${LOGO_MARK}<b>Растр</b></a>
         <p>Бесплатный конвертер изображений, который работает прямо в браузере. Файлы не покидают ваше устройство.</p>
       </div>
-      ${col('Конвертеры', conv)}
+      ${col('Картинки', conv)}
+      ${col('Документы', dl)}
       ${col('Инструменты', tl)}
       ${col('Сервис', [['/formaty/', 'Форматы изображений'], ['/instrukciya/', 'Инструкция'], ['/konfidencialnost/', 'Конфиденциальность'], ['/usloviya/', 'Условия использования'], ['/licenzii/', 'Лицензии']])}
     </div>
@@ -266,6 +277,77 @@ export function converter() {
 </section>`;
 }
 
+/* ---------------- конвертер документов ---------------- */
+
+export function docConverter() {
+  const segBtns = (id, label, items) => `<div class="seg" id="${id}" role="group" aria-label="${label}">${items.map(([v, t]) => `<button type="button" data-v="${v}" aria-pressed="false">${t}</button>`).join('')}</div>`;
+  return `<section class="app app-docs" id="app" aria-label="Конвертер документов">
+  <div class="work">
+    <label class="drop" id="drop" for="file">
+      <input type="file" id="file" multiple accept=".pdf,.docx,.txt,.text,.md,.markdown,.html,.htm,.xlsx,.xlsm,.xls,.ods,.csv,.tsv,.json">
+      <div class="drop-in">
+        <div class="drop-icon">${ICONS.upload}</div>
+        <div class="drop-text">
+          <div class="drop-title"><span class="when-empty">Перетащите документы сюда</span><span class="when-files">Добавить ещё документы</span></div>
+          <p class="drop-sub">Можно сразу несколько, в любое место страницы. Файлы не загружаются на сервер</p>
+        </div>
+        <span class="drop-btn">Выбрать файлы</span>
+      </div>
+      <noscript><p class="err">Для работы конвертера включите JavaScript.</p></noscript>
+      <div class="drop-formats mono">Принимаем: PDF · DOCX · XLSX · XLS · ODS · CSV · TXT · Markdown · HTML · JSON</div>
+    </label>
+    <div class="queue-empty" aria-hidden="true">
+      <div class="sk"><i></i><b></b></div>
+      <div class="sk"><i></i><b></b></div>
+      <div class="sk"><i></i><b></b></div>
+      <p>Здесь появятся ваши документы: каждый можно скачать отдельно или все сразу одним ZIP</p>
+    </div>
+    <div class="queue ym-hide-content" id="queue" hidden>
+      <div class="queue-head">
+        <div class="q-title"><h2 id="q-title">Очередь</h2><span class="mono" id="q-summary"></span></div>
+        <button class="btn ghost" id="clear" type="button">Очистить</button>
+      </div>
+      <ul class="list" id="list" aria-labelledby="q-title"></ul>
+    </div>
+  </div>
+  <aside class="settings" aria-label="Настройки конвертации">
+    <div class="sec" id="sec-format">
+      <span class="label">Во что конвертировать</span>
+      <div class="fmts" id="targets" role="group" aria-label="Формат результата"></div>
+    </div>
+    <div class="sec" data-show="split">
+      <span class="label">Как разделить</span>
+      ${segBtns('split-mode', 'Режим разделения', [['each', 'Каждую страницу'], ['range', 'Выбранные страницы']])}
+    </div>
+    <div class="sec" data-show="images">
+      <span class="label">Качество картинок</span>
+      ${segBtns('dpi', 'Разрешение', [[72, '72 dpi'], [150, '150 dpi'], [300, '300 dpi']])}
+      <p class="hint">150 dpi — для экрана и почты, 300 dpi — для печати.</p>
+    </div>
+    <div class="sec" data-show="pages" id="sec-pages">
+      <label class="label" for="pages">Страницы</label>
+      <input type="text" id="pages" placeholder="Все или, например, 1-3, 5" autocomplete="off">
+    </div>
+    <div class="sec" data-show="pdfout">
+      <span class="label">Лист и шрифт</span>
+      ${segBtns('page-size', 'Размер листа', [['a4', 'A4'], ['letter', 'Letter']])}
+      ${segBtns('font-size', 'Размер шрифта', [[10, '10 пт'], [11, '11 пт'], [12, '12 пт'], [14, '14 пт']])}
+    </div>
+    <div class="sec" data-show="csv">
+      <span class="label">Разделитель CSV</span>
+      ${segBtns('csv-sep', 'Разделитель', [[';', '; (Excel в России)'], [',', ', (запятая)']])}
+    </div>
+    <div class="sec" data-show="merge">
+      <span class="label">Порядок</span>
+      <p class="hint" id="merge-hint"></p>
+    </div>
+    <div class="actions">
+      <button class="btn primary" id="run" type="button">Конвертировать</button>
+      <button class="btn" id="zip" type="button" disabled>Скачать всё одним .zip</button>
+    </div>
+  </aside>
+</section>`;
+}
 const APP_TAIL = `<dialog id="dlg" class="ym-hide-content" aria-labelledby="dlg-title">
   <div class="dlg-head">
     <h3 id="dlg-title"></h3>
@@ -322,7 +404,13 @@ export function steps(items) {
 
 export function render(p, site, assets) {
   const crumbs = p.crumbs ? crumbsHtml(p.crumbs) : '';
-  const scripts = p.app
+  const scripts = p.docs
+    ? `<div class="toast" id="toast" role="status" aria-live="polite"></div>
+${p.preset ? `<script type="application/json" id="preset">${JSON.stringify(p.preset).replace(/</g, '\\u003c')}</script>` : ''}
+<script src="${assets['rastr-convert.js']}"></script>
+<script src="${assets['rastr-docs.js']}"></script>
+<script src="${assets['docs.js']}"></script>`
+    : p.app
     ? `${APP_TAIL}
 ${p.preset ? `<script type="application/json" id="preset">${JSON.stringify(p.preset).replace(/</g, '\\u003c')}</script>` : ''}
 <script src="${assets['rastr-convert.js']}"></script>

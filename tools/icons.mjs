@@ -5,6 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { launch } from '../tests/helpers.mjs';
 import { landings } from '../src/content/landings.mjs';
+import { documents } from '../src/content/documents.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const ASSETS = path.join(ROOT, 'src', 'assets');
@@ -55,9 +56,10 @@ console.log('Иконки: ' + Object.keys(out).join(', '));
 const cards = [
   { key: 'home', title: 'Конвертер изображений онлайн', sub: '14 форматов · прямо в браузере · бесплатно' },
   { key: 'formaty', title: 'Форматы изображений', sub: 'PNG, JPG, WEBP, AVIF, HEIC и другие' },
+  { key: 'dokumenty', title: 'Конвертер документов', sub: 'PDF · Word · Excel · CSV · Markdown' },
   { key: 'instrumenty', title: 'Инструменты для фото', sub: 'Сжать · Сжать до N КБ · Изменить размер' },
   { key: 'instrukciya', title: 'Как конвертировать изображения', sub: 'Инструкция к Растру' },
-  ...landings.map(l => ({ key: l.slug, title: l.card[1] ? `${l.card[0]} <b>→</b> ${l.card[1]}` : l.card[0], sub: l.card[2] + ' · онлайн, бесплатно', big: !!l.card[1] }))
+  ...landings.concat(documents).map(l => ({ key: l.slug, title: l.card[1] ? `${l.card[0]} <b>→</b> ${l.card[1]}` : l.card[0], sub: l.card[2] + ' · онлайн, бесплатно', big: !!l.card[1] }))
 ];
 await page.setViewportSize({ width: 1200, height: 630 });
 for (const c of cards) {

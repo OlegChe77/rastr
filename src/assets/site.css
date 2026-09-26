@@ -481,7 +481,7 @@ pre .s { color: #7FD8F0; }
 
 /* ================= подвал ================= */
 .site-foot { margin-top: 80px; border-top: 1px solid var(--line); background: var(--bg-2); padding-block: 44px calc(env(safe-area-inset-bottom, 0px) + 32px); }
-.foot-grid { display: grid; grid-template-columns: 1.4fr repeat(3, 1fr); gap: 32px; }
+.foot-grid { display: grid; grid-template-columns: 1.3fr repeat(4, 1fr); gap: 28px; }
 @media (max-width: 860px) { .foot-grid { grid-template-columns: 1fr 1fr; } }
 @media (max-width: 480px) { .foot-grid { grid-template-columns: 1fr; } }
 .foot-grid p { color: var(--muted); font-size: 14px; margin: 12px 0 0; max-width: 36ch; }
@@ -555,3 +555,20 @@ pre .s { color: #7FD8F0; }
 .tool-target #sec-target .target { gap: 12px; }
 /* в инструментах форматов мало — кнопки в ряд */
 .app[class*="tool-"] .fmts { grid-template-columns: repeat(auto-fill, minmax(124px, 1fr)); }
+/* ---------- конвертер документов ---------- */
+.doc-row { grid-template-columns: 52px minmax(0, 1fr) auto; }
+.doc-ic {
+  width: 52px; height: 60px; border-radius: 8px 16px 8px 8px; display: grid; place-items: end center; padding-bottom: 8px;
+  background: var(--surface-2); border: 1px solid var(--line); font-family: var(--f-mono); font-size: 10.5px; font-weight: 500; color: var(--accent);
+}
+.row[data-kind] .doc-ic { color: var(--accent); }
+.doc-row .order { display: none; }
+.is-merge .doc-row .order { display: inline-flex; }
+.doc-row .order.down svg { transform: rotate(180deg); }
+.app-docs .fmts { grid-template-columns: repeat(auto-fill, minmax(124px, 1fr)); }
+#pages { width: 100%; padding: 9px 12px; border-radius: var(--r-sm); border: 1px solid var(--line-strong); background: var(--surface); font-family: var(--f-mono); font-size: 13px; }
+.app-docs .seg button { font-family: var(--f-body); font-size: 13px; padding: 8px 6px; }
+@media (max-width: 560px) { .doc-row { grid-template-columns: 44px minmax(0, 1fr); } .doc-ic { width: 44px; height: 52px; } }
+
+/* на узких телефонах в шапке — только значок логотипа, чтобы поместились «Картинки», «Документы» и «Инструменты» */
+@media (max-width: 420px) { .site-head .logo b { display: none; } .menu a { padding: 7px 8px; } }

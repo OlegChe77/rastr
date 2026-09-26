@@ -3,6 +3,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { startServer, launch } from '../tests/helpers.mjs';
+import * as F from '../tests/doc-fixtures.mjs';
 
 const OUT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', 'docs', 'screenshots');
 await fs.mkdir(OUT, { recursive: true });
@@ -55,6 +56,19 @@ try {
   await shot('dark', '/', { dark: true });
   await shot('popular', '/', { element: '#popular' });
   await shot('mobile', '/', { width: 390, height: 844 });
+  // конвертер документов: договор в PDF, отчёт Word и таблица CSV переведены в PDF
+  await shot('docs', '/dokumenty/', { element: '#app', prepare: async page => {
+    await page.setInputFiles('#file', [
+      { name: 'отчёт-за-сентябрь.docx', mimeType: 'application/octet-stream', buffer: F.docx() },
+      { name: 'клиенты.csv', mimeType: 'text/csv', buffer: Buffer.from(F.text.csv) },
+      { name: 'заметки.md', mimeType: 'text/markdown', buffer: Buffer.from(F.text.md) }
+    ]);
+    await page.waitForFunction(() => [...document.querySelectorAll('.row')].every(r => r.dataset.status === 'ready'));
+    await page.click('#run');
+    await page.waitForFunction(() => document.querySelectorAll('.row[data-status="done"]').length === 3, null, { timeout: 60000 });
+    await page.waitForTimeout(3500);
+  } });
+  await shot('docs-hub', '/dokumenty/');
 } finally {
   await browser.close();
   await server.close();

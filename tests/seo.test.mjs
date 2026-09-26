@@ -8,6 +8,9 @@ import config from '../site.config.mjs';
 import { startServer, launch, ROOT, PROJECT, bmp } from './helpers.mjs';
 import { execFileSync } from 'node:child_process';
 import { landings } from '../src/content/landings.mjs';
+import { documents } from '../src/content/documents.mjs';
+// все посадочные страницы: картинки и документы — к ним одинаковые требования по SEO
+const allLandings = landings.concat(documents);
 
 const SITE = config.url.replace(/\/+$/, '');
 const VERIFY = /^(yandex_[0-9a-f]+|google[0-9a-f]+)\.html$/;
@@ -53,7 +56,7 @@ test('title и description уникальны, нужной длины и сод
     if (descs.has(desc)) problems.push(`${p}: description повторяется`);
     titles.add(title); descs.add(desc);
   }
-  for (const l of landings) {
+  for (const l of allLandings) {
     const html = pages.find(p => p.path === `/${l.slug}/`).html;
     const main = l.keywords.split(',')[0].trim().toLowerCase();
     const h1 = attr(html, /<h1[^>]*>([\s\S]*?)<\/h1>/).toLowerCase();
@@ -91,7 +94,7 @@ test('на каждой странице один H1, canonical, lang, Open Grap
 
 test('посадочные страницы: WebApplication, FAQPage, достаточно уникального текста', () => {
   const problems = [], leads = new Set();
-  for (const l of landings) {
+  for (const l of allLandings) {
     const html = pages.find(p => p.path === `/${l.slug}/`).html;
     const types = [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)].map(m => JSON.parse(m[1])['@type']);
     for (const t of ['WebApplication', 'FAQPage', 'BreadcrumbList']) if (!types.includes(t)) problems.push(`/${l.slug}/: нет ${t}`);
@@ -204,7 +207,7 @@ test('на сайте нет дублей текста и вопросов FAQ �
 
 test('на сайте нет данных владельца', () => {
   const found = [];
-  for (const { path: p, html } of pages) for (const re of [/class="fill"/, /[\w.-]+@[\w-]+\.\w{2,}/, /ИНН|ОГРН/, /Контакты/]) if (re.test(html)) found.push(p + ': ' + re);
+  for (const { path: p, html } of pages) for (const re of [/class="fill"/, /[\w.-]+@[\w-]+\.[a-z]{2,}\b/i, /ИНН|ОГРН/, /Контакты/]) if (re.test(html)) found.push(p + ': ' + re);
   assert.deepEqual(found, []);
 });
 

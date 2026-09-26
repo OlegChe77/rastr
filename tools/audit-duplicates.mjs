@@ -18,7 +18,7 @@ for (const p of pages) p.url = p.url.replace('//', '/');
 
 const clean = s => s.replace(/<[^>]+>/g, ' ').replace(/&[a-z]+;/g, ' ').replace(/\s+/g, ' ').trim();
 // только основное содержимое, без шапки, подвала и блоков-ссылок
-const main = html => html.split('<main id="main">')[1].split('</main>')[0].replace(/<ul class="(links|tools)">[\s\S]*?<\/ul>/g, '').replace(/<section class="app"[\s\S]*?<\/section>/g, '');
+const main = html => html.split('<main id="main">')[1].split('</main>')[0].replace(/<ul class="(links|tools)">[\s\S]*?<\/ul>/g, '').replace(/<section class="app[^"]*"[\s\S]*?<\/section>/g, '');
 
 function report(title, pick, minLen = 40) {
   const seen = new Map();

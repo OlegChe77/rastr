@@ -1,10 +1,12 @@
 // Все страницы сайта. Каждая: путь, title, description, ключевые слова, тело и разметка schema.org.
 import { landings, tools, converters } from './content/landings.mjs';
 import { formatInfo } from './content/formats.mjs';
-import { esc, converter, hero, faqHtml, faqSchema, linksGrid, toolsGrid, steps, crumbsSchema, cardTitle, ICONS } from './layout.mjs';
+import { documents, docGroups } from './content/documents.mjs';
+import { esc, converter, docConverter, hero, faqHtml, faqSchema, linksGrid, toolsGrid, steps, crumbsSchema, cardTitle, ICONS } from './layout.mjs';
 
 const HOME = { name: 'Главная', path: '/' };
 const TOOLS_CRUMB = { name: 'Инструменты', path: '/instrumenty/' };
+const DOCS_CRUMB = { name: 'Документы', path: '/dokumenty/' };
 
 function webApp(site, name, path, description) {
   return {
@@ -78,6 +80,7 @@ export function getPages(site, formats) {
     body: `${hero({ h1: 'Конвертер изображений онлайн', lead: 'Переводите картинки между 14 форматами прямо в браузере: PNG, JPG, WEBP, HEIC с iPhone, AVIF, PDF, ICO и другие. Меняйте размер, качество и ориентацию — пачкой и без загрузки файлов на сервер.' })}
 <div class="wrap">${converter()}</div>
 ${section('how', 'Как конвертировать изображение', 'Три шага, без регистрации и установки программ.', HOW)}
+${section('docs', 'Конвертер документов', 'PDF, Word, Excel, CSV, TXT и Markdown — тоже прямо в браузере. <a href="/dokumenty/">Все конвертеры документов</a>.', linksGrid(documents.slice(0, 8)))}
 ${section('tools', 'Инструменты для фото', 'Отдельные сервисы под частые задачи: уменьшить вес, уложиться в лимит сайта, поменять размер.', toolsGrid(tools))}
 ${section('popular', 'Конвертеры форматов', 'Страницы с готовыми настройками под частые пары форматов.', linksGrid(converters))}
 ${section('why', 'Почему Растр', null, FEATURES)}
@@ -106,6 +109,69 @@ ${section('faq', 'Вопросы и ответы', null, faqHtml(l.faq))}
 ${isTool
   ? section('more', 'Другие инструменты', null, toolsGrid(tools.filter(x => x !== l))) + '\n' + section('conv', 'Конвертеры форматов', null, linksGrid(converters.slice(0, 8)))
   : section('more', 'Другие конвертеры', null, linksGrid(related.concat(landings.filter(x => x !== l && !related.includes(x)).slice(0, 4))))}`
+    });
+  }
+
+  /* ---------- конвертеры документов ---------- */
+  for (const d of documents) {
+    const path = `/${d.slug}/`;
+    const name = d.card[1] ? `${d.card[0]} в ${d.card[1]}` : d.card[0];
+    const crumbs = [HOME, DOCS_CRUMB, { name, path }];
+    const related = d.related.map(s => documents.find(x => x.slug === s)).filter(Boolean);
+    const more = related.concat(documents.filter(x => x !== d && !related.includes(x) && x.group === d.group)).slice(0, 4);
+    pages.push({
+      path, file: `${d.slug}/index.html`, ogKey: d.slug, priority: '0.9', changefreq: 'monthly',
+      title: d.title, description: d.description, keywords: d.keywords, ogTitle: d.h1,
+      docs: true, preset: d.preset, crumbs,
+      schema: [webApp(site, d.h1, path, d.description), crumbsSchema(site, crumbs), faqSchema(d.faq)],
+      body: `${hero({ h1: esc(d.h1), lead: esc(d.lead) })}
+<div class="wrap">${docConverter()}</div>
+<section class="wrap section"><div class="prose">
+${d.sections.map(s => `<h2>${esc(s.h)}</h2>${s.html}`).join('\n')}
+</div></section>
+${section('faq', 'Вопросы и ответы', null, faqHtml(d.faq))}
+${section('more', 'Другие конвертеры документов', null, linksGrid(more))}`
+    });
+  }
+
+  /* ---------- раздел «Документы» ---------- */
+  {
+    const path = '/dokumenty/';
+    const crumbs = [HOME, DOCS_CRUMB];
+    const desc = 'Бесплатный конвертер документов онлайн: PDF в Word и JPG, Word в PDF, Excel в CSV, объединение и разделение PDF. Файлы обрабатываются в браузере, без загрузки на сервер.';
+    const faq = [
+      { q: 'Какие документы можно конвертировать?', a: 'PDF, Word (DOCX), Excel (XLSX, XLS, ODS), CSV, TXT, Markdown, HTML и JSON. Старый формат .doc нужно сначала пересохранить в Word как .docx.' },
+      { q: 'Почему документы не загружаются на сервер?', a: 'Все преобразования выполняют библиотеки, которые работают прямо в браузере. Поэтому договоры, сканы паспортов и отчёты не покидают ваше устройство.' },
+      { q: 'Нужен ли интернет?', a: 'Да, при первом использовании: модули для чтения PDF, Word и таблиц подгружаются с CDN. Сами документы при этом никуда не отправляются.' },
+      { q: 'Есть ли ограничение на размер файла?', a: 'Жёсткого лимита нет, всё зависит от памяти устройства. PDF в сотни страниц обрабатываются, но на телефоне это может занять минуту-другую.' }
+    ];
+    pages.push({
+      path, file: 'dokumenty/index.html', ogKey: 'dokumenty', priority: '0.9', changefreq: 'weekly', crumbs,
+      title: 'Конвертер документов онлайн: PDF, Word, Excel, CSV | Растр',
+      description: desc,
+      keywords: 'конвертер документов онлайн, конвертировать документ, pdf в word, word в pdf, pdf в jpg, excel в csv, объединить pdf',
+      docs: true,
+      schema: [webApp(site, 'Конвертер документов онлайн', path, desc), crumbsSchema(site, crumbs), faqSchema(faq)],
+      body: `${hero({ h1: 'Конвертер документов онлайн', lead: 'PDF, Word, Excel, CSV, TXT и Markdown — в нужный формат прямо в браузере. Объединяйте и разделяйте PDF, достаньте текст или сделайте из документа картинки. Файлы не загружаются на сервер.' })}
+<div class="wrap">${docConverter()}</div>
+${docGroups.map(g => section('g-' + g.id, g.title, g.sub, linksGrid(documents.filter(d => d.group === g.id)))).join('\n')}
+<section class="wrap section"><div class="prose">
+  <h2>Что во что можно перевести</h2>
+  <div class="card table-wrap"><table>
+    <thead><tr><th>Исходный файл</th><th>Результат</th></tr></thead>
+    <tbody>
+      <tr><td>PDF</td><td>JPG, PNG, TXT, Word; объединение и разделение</td></tr>
+      <tr><td>Word (DOCX)</td><td>PDF, TXT, HTML, Markdown</td></tr>
+      <tr><td>TXT</td><td>PDF, Word, HTML</td></tr>
+      <tr><td>Markdown</td><td>HTML, PDF, Word</td></tr>
+      <tr><td>HTML</td><td>PDF, Word, TXT, Markdown</td></tr>
+      <tr><td>Excel, XLS, ODS</td><td>CSV, JSON, PDF, Excel</td></tr>
+      <tr><td>CSV, JSON</td><td>Excel, CSV, JSON, PDF</td></tr>
+    </tbody>
+  </table></div>
+  <p>Нужно сделать PDF из фотографий или сканов? Для этого есть конвертер картинок: <a href="/jpg-v-pdf/">JPG в PDF</a>.</p>
+</div></section>
+${section('faq', 'Вопросы о конвертере документов', null, faqHtml(faq))}`
     });
   }
 
@@ -261,7 +327,7 @@ ${section('all', 'Готовые конвертеры', null, linksGrid(landings
     <h2>Что хранится в браузере</h2>
     <p>Последний выбранный формат, чтобы не выбирать его заново (ключ <code>rastr.format</code>), и отметка, что вы закрыли уведомление о cookies (ключ <code>rastr.cookies</code>). Они хранятся только на вашем устройстве. Удалить их можно, очистив данные сайта в браузере.</p>
     <h2>Сторонние сервисы</h2>
-    <p>Шрифты загружаются с Google Fonts, а модули чтения TIFF и HEIC — с jsDelivr, только когда вы открываете такой файл. Эти сервисы, как любой сайт, видят IP-адрес и тип браузера. Изображения им не передаются.</p>
+    <p>Шрифты загружаются с Google Fonts. Модули для чтения TIFF, HEIC и документов (PDF, Word, Markdown) и шрифт для создаваемых PDF — с jsDelivr, модуль для таблиц Excel — с cdn.sheetjs.com. Модули загружаются только когда нужны. Эти сервисы, как любой сайт, видят IP-адрес и тип браузера. Ваши изображения и документы им не передаются: всё обрабатывается на вашем устройстве.</p>
     <h2>Счётчик посещений</h2>
     <p>Внизу страницы показано число посещений сегодня и всего. Его считает открытый сервис hits.sh: при открытии страницы браузер загружает с него картинку-счётчик. Сервис не ставит cookies и не получает адрес страницы, с которой пришёл запрос, но, как любой сервер, видит IP-адрес и тип браузера.</p>`);
 
@@ -289,10 +355,17 @@ ${section('all', 'Готовые конвертеры', null, linksGrid(landings
         <tr><td><a href="https://github.com/nodeca/pako" rel="noopener" target="_blank">pako</a></td><td>Распаковка TIFF</td><td>MIT и Zlib</td></tr>
         <tr><td><a href="https://github.com/alexcorvi/heic2any" rel="noopener" target="_blank">heic2any</a></td><td>Чтение HEIC</td><td>MIT</td></tr>
         <tr><td><a href="https://github.com/strukturag/libheif" rel="noopener" target="_blank">libheif</a>, <a href="https://github.com/strukturag/libde265" rel="noopener" target="_blank">libde265</a></td><td>Внутри heic2any</td><td>LGPL-3.0</td></tr>
+        <tr><td><a href="https://github.com/mozilla/pdf.js" rel="noopener" target="_blank">pdf.js</a></td><td>Чтение и отрисовка PDF</td><td>Apache-2.0</td></tr>
+        <tr><td><a href="https://github.com/Hopding/pdf-lib" rel="noopener" target="_blank">pdf-lib</a></td><td>Создание, объединение и разделение PDF</td><td>MIT</td></tr>
+        <tr><td><a href="https://github.com/Hopding/fontkit" rel="noopener" target="_blank">fontkit</a></td><td>Шрифты в создаваемых PDF</td><td>MIT</td></tr>
+        <tr><td><a href="https://github.com/mwilliamson/mammoth.js" rel="noopener" target="_blank">mammoth</a></td><td>Чтение документов Word</td><td>BSD-2-Clause</td></tr>
+        <tr><td><a href="https://github.com/dolanmiu/docx" rel="noopener" target="_blank">docx</a></td><td>Создание документов Word</td><td>MIT</td></tr>
+        <tr><td><a href="https://github.com/markedjs/marked" rel="noopener" target="_blank">marked</a></td><td>Разбор Markdown</td><td>MIT</td></tr>
+        <tr><td><a href="https://sheetjs.com" rel="noopener" target="_blank">SheetJS Community Edition</a></td><td>Таблицы Excel, CSV, JSON</td><td>Apache-2.0</td></tr>
       </tbody>
     </table></div>
     <h2>Шрифты</h2>
-    <p>Unbounded, Onest и JetBrains Mono распространяются по <a href="https://openfontlicense.org" rel="noopener" target="_blank">SIL Open Font License 1.1</a>.</p>`);
+    <p>Unbounded, Onest и JetBrains Mono на сайте и PT Sans (ParaType) в создаваемых PDF распространяются по <a href="https://openfontlicense.org" rel="noopener" target="_blank">SIL Open Font License 1.1</a>.</p>`);
 
   /* ---------- 404 ---------- */
   pages.push({

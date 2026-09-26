@@ -2,10 +2,10 @@
   <img src="src/assets/favicon.svg" width="88" height="88" alt="Логотип Растра">
 </p>
 
-<h1 align="center">Растр — конвертер изображений</h1>
+<h1 align="center">Растр — конвертер изображений и документов</h1>
 
 <p align="center">
-  Бесплатный онлайн-конвертер картинок между 14 форматами.<br>
+  Бесплатный онлайн-конвертер картинок (14 форматов) и документов: PDF, Word, Excel, CSV, Markdown.<br>
   Всё работает прямо в браузере — файлы не загружаются на сервер.
 </p>
 
@@ -40,6 +40,25 @@
     <td align="center">На телефоне</td>
   </tr>
 </table>
+
+## Конвертер документов
+
+Раздел `/dokumenty/` и 15 страниц под запросы. Всё так же работает в браузере, без загрузки файлов на сервер.
+
+<p align="center">
+  <img src="docs/screenshots/docs.png" alt="Конвертер документов: Word, CSV и Markdown переведены в PDF" width="900">
+</p>
+
+| Исходный файл | Во что |
+|---|---|
+| PDF | JPG, PNG, TXT, Word; объединить, разделить |
+| Word (DOCX) | PDF, TXT, HTML, Markdown |
+| TXT, Markdown, HTML | PDF, Word, HTML, TXT, Markdown |
+| Excel (XLSX, XLS, ODS), CSV, JSON | CSV, Excel, JSON, PDF |
+
+Страницы: `/pdf-v-jpg/`, `/pdf-v-png/`, `/pdf-v-word/`, `/pdf-v-txt/`, `/obedinit-pdf/`, `/razdelit-pdf/`, `/word-v-pdf/`, `/word-v-txt/`, `/word-v-html/`, `/txt-v-pdf/`, `/txt-v-word/`, `/markdown-v-html/`, `/markdown-v-pdf/`, `/excel-v-csv/`, `/csv-v-excel/`.
+
+Как устроено: все форматы сводятся к общему промежуточному виду (заголовки, абзацы, списки, таблицы, картинки), из которого собираются PDF, Word, HTML, текст и Markdown. PDF с кириллицей набирается шрифтом PT Sans. Ограничение: **PDF в Word переносит только текст** — вёрстку PDF без сервера не восстановить, а сканы без текстового слоя не распознаются (об этом честно написано на страницах).
 
 ## Инструменты для фото
 
@@ -84,7 +103,9 @@
 | Папка / файл | Что это |
 |---|---|
 | `src/assets/rastr-convert.js` | Плагин конвертации без зависимостей: кодировщики GIF, BMP, ICO, TIFF, TGA, PDF, ZIP и др. |
-| `src/assets/app.js`, `site.css` | Интерфейс конвертера и стили |
+| `src/assets/app.js`, `site.css` | Интерфейс конвертера картинок и стили |
+| `src/assets/rastr-docs.js`, `docs.js` | Движок и интерфейс конвертера документов |
+| `src/content/documents.mjs` | Тексты и настройки страниц конвертера документов |
 | `src/content/landings.mjs` | Тексты и настройки посадочных страниц |
 | `src/content/formats.mjs` | Справочник форматов |
 | `src/pages.mjs`, `src/layout.mjs` | Страницы, шаблон, метатеги и разметка |
@@ -150,7 +171,7 @@ npm run screenshots # переснять скриншоты для README
 ## Безопасность
 
 - **Content Security Policy** в каждой странице: скрипты только с сайта и трёх закреплённых версий декодеров на jsDelivr, встроенные скрипты запрещены, object-src 'none', ase-uri 'self'. 'unsafe-eval' оставлен только ради декодера HEIC (heic2any собран Emscripten).
-- **Subresource Integrity:** у декодеров TIFF и HEIC с CDN проверяется хэш — подменённый файл браузер не запустит.
+- **Subresource Integrity:** у всех библиотек с CDN (TIFF, HEIC, pdf.js и его Worker, pdf-lib, fontkit, mammoth, docx, marked, SheetJS) и у шрифта PT Sans проверяется хэш — подменённый файл браузер не запустит. Тест проверяет это на подменённом файле.
 - **Заголовки** (в ender.yaml): HSTS, X-Content-Type-Options, X-Frame-Options и rame-ancestors, Referrer-Policy, Permissions-Policy, Cross-Origin-Opener-Policy.
 - Имена файлов и сообщения выводятся с экранированием, пользовательские SVG открываются только как картинки.
 - Зависимостей у сайта нет; 
@@ -161,4 +182,4 @@ pm run check:live.
 
 ## Лицензии сторонних компонентов
 
-Модули чтения TIFF (UTIF.js, pako) и HEIC (heic2any, libheif) загружаются с jsDelivr только при открытии таких файлов. Шрифты Unbounded, Onest и JetBrains Mono — SIL Open Font License 1.1. Подробности — на странице `/licenzii/`.
+Загружаются с CDN только при необходимости: UTIF.js и pako (TIFF), heic2any и libheif (HEIC), pdf.js (Apache-2.0), pdf-lib и fontkit (MIT), mammoth (BSD-2-Clause), docx (MIT), marked (MIT), SheetJS Community Edition (Apache-2.0). Шрифты Unbounded, Onest, JetBrains Mono и PT Sans — SIL Open Font License 1.1. Подробности — на странице `/licenzii/`.

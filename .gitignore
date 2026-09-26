@@ -1,3 +1,5 @@
 node_modules/
 # dist/ собирается заново на Render при каждом деплое
 dist/
+# локальные настройки Claude Code (сервер предпросмотра)
+.claude/

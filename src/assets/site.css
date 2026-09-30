@@ -521,6 +521,9 @@ pre .s { color: #7FD8F0; }
 .chk { font-weight: 600; padding: 1px 8px; border-radius: 6px; }
 .chk-ok { color: var(--ok); background: var(--ok-soft); }
 .chk-bad { color: var(--err); background: var(--err-soft); }
+.chk-note { color: var(--ink); background: color-mix(in srgb, var(--yellow) 26%, transparent); }
+/* «Удалить метаданные»: только очередь файлов и одна кнопка, без настроек размера и качества */
+.tool-strip #sec-quality, .tool-strip #sec-target, .tool-strip #sec-size, .tool-strip #sec-rotate { display: none !important; }
 
 /* уведомление о cookies (показывает metrika.js на боевом сайте) */
 .cookie-bar {

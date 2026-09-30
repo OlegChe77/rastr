@@ -806,6 +806,173 @@
     return { blob, name: outputName(input.name, formatId), width: canvas.width, height: canvas.height };
   }
 
+  /* ---------------- метаданные: чтение и удаление без пересжатия ---------------- */
+
+  // JPEG: из файла вырезаются сегменты APP1 (EXIF, XMP), APP3–APP12, APP13 (IPTC) и комментарии.
+  // Пиксели не трогаются, поэтому качество и вес те же. Профиль цвета (APP2) и JFIF остаются.
+  // Если поворот в EXIF не «как есть», в файл возвращается крошечный EXIF только с ним, иначе фото лягло бы набок.
+  // PNG: удаляются текстовые блоки, eXIf и tIME. Остальные форматы пересохраняются через холст, метаданные при этом пропадают.
+  const meta = (function () {
+    const ascii = (b, s, e) => { let r = ''; for (let i = s; i < e && i < b.length; i++) r += String.fromCharCode(b[i]); return r.replace(/\0+$/, '').trim(); };
+
+    function jpegScan(b) {
+      if (b.length < 4 || b[0] !== 0xFF || b[1] !== 0xD8) return null;
+      const segs = [];
+      let p = 2;
+      while (p + 4 <= b.length) {
+        if (b[p] !== 0xFF) return null;
+        const m = b[p + 1];
+        if (m === 0xFF) { p++; continue; }
+        if (m === 0xDA) return { segs, sos: p };
+        if (m === 0xD9) return null;
+        if ((m >= 0xD0 && m <= 0xD7) || m === 0x01) { p += 2; continue; }
+        const len = (b[p + 2] << 8) | b[p + 3];
+        if (len < 2 || p + 2 + len > b.length) return null;
+        segs.push({ m, start: p, end: p + 2 + len });
+        p += 2 + len;
+      }
+      return null;
+    }
+
+    const isExif = (b, s) => b[s + 4] === 0x45 && b[s + 5] === 0x78 && b[s + 6] === 0x69 && b[s + 7] === 0x66 && b[s + 8] === 0 && b[s + 9] === 0;
+    const isXmp = (b, s) => ascii(b, s + 4, s + 33).startsWith('http://ns.adobe.com/xap/1.0/');
+    const dropJpeg = m => m === 0xE1 || (m >= 0xE3 && m <= 0xED) || m === 0xFE;
+
+    function readExif(b, s, end) {
+      const out = { orientation: 1 };
+      const t = s + 10;                                   // начало TIFF-заголовка
+      if (t + 8 > end) return out;
+      const le = b[t] === 0x49;
+      if (!le && b[t] !== 0x4D) return out;
+      const dv = new DataView(b.buffer, b.byteOffset, b.byteLength);
+      const u16 = o => dv.getUint16(o, le), u32 = o => dv.getUint32(o, le);
+      const inRange = (o, n) => o >= t && o + n <= end;
+      function ifd(off, handler) {
+        let o = t + off;
+        if (!inRange(o, 2)) return;
+        const n = u16(o); o += 2;
+        for (let i = 0; i < n && inRange(o, 12); i++, o += 12) handler(u16(o), u16(o + 2), u32(o + 4), o + 8);
+      }
+      const str = (count, at) => {
+        const s0 = count <= 4 ? at : t + u32(at);
+        return inRange(s0, count) ? ascii(b, s0, s0 + count) : '';
+      };
+      const rat = at => { const o = t + u32(at); if (!inRange(o, 24)) return null; const r = k => { const d = u32(o + k * 8 + 4); return d ? u32(o + k * 8) / d : 0; }; return r(0) + r(1) / 60 + r(2) / 3600; };
+      let gpsOff = 0, exifOff = 0;
+      const gps = {};
+      ifd(u32(t + 4), (tag, type, count, at) => {
+        if (tag === 0x010f) out.make = str(count, at);
+        else if (tag === 0x0110) out.model = str(count, at);
+        else if (tag === 0x0131) out.software = str(count, at);
+        else if (tag === 0x0132) out.date = str(count, at);
+        else if (tag === 0x0112) out.orientation = u16(at) || 1;
+        else if (tag === 0x8825) gpsOff = u32(at);
+        else if (tag === 0x8769) exifOff = u32(at);
+      });
+      if (exifOff) ifd(exifOff, (tag, type, count, at) => { if (tag === 0x9003) out.date = str(count, at) || out.date; });
+      if (gpsOff) {
+        ifd(gpsOff, (tag, type, count, at) => {
+          if (tag === 1) gps.latRef = str(count, at);
+          else if (tag === 2) gps.lat = rat(at);
+          else if (tag === 3) gps.lonRef = str(count, at);
+          else if (tag === 4) gps.lon = rat(at);
+        });
+        out.gpsPresent = true;
+        if (gps.lat != null && gps.lon != null) {
+          out.gps = { lat: (gps.latRef === 'S' ? -1 : 1) * gps.lat, lon: (gps.lonRef === 'W' ? -1 : 1) * gps.lon };
+        }
+      }
+      return out;
+    }
+
+    // Что найдено в файле: { format, found: ['GPS', 'камера', ...], make, model, date, gps, orientation } или null
+    function read(b) {
+      if (b[0] === 0xFF && b[1] === 0xD8) {
+        const scan = jpegScan(b);
+        if (!scan) return null;
+        const info = { format: 'JPEG', found: [], orientation: 1 };
+        let exif = null, xmp = false, iptc = false, comment = false;
+        for (const s of scan.segs) {
+          if (s.m === 0xE1 && isExif(b, s.start)) { try { exif = readExif(b, s.start, s.end); } catch (e) { exif = { orientation: 1 }; } }
+          else if (s.m === 0xE1 && isXmp(b, s.start)) xmp = true;
+          else if (s.m === 0xED) iptc = true;
+          else if (s.m === 0xFE) comment = true;
+        }
+        if (exif) {
+          Object.assign(info, exif);
+          if (exif.gpsPresent) info.found.push('место съёмки (GPS)');
+          if (exif.make || exif.model) info.found.push('камера: ' + [exif.make, exif.model].filter(Boolean).join(' '));
+          if (exif.date) info.found.push('дата съёмки: ' + exif.date.replace(/^(\d{4}):(\d{2}):(\d{2})/, '$3.$2.$1'));
+          if (exif.software) info.found.push('программа: ' + exif.software);
+          if (!info.found.length) info.found.push('данные EXIF');
+        }
+        if (xmp) info.found.push('XMP');
+        if (iptc) info.found.push('IPTC (автор, подписи)');
+        if (comment) info.found.push('комментарий');
+        return info;
+      }
+      if (b.length > 8 && b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4E && b[3] === 0x47) {
+        const info = { format: 'PNG', found: [] };
+        const dv = new DataView(b.buffer, b.byteOffset, b.byteLength);
+        for (let p = 8; p + 12 <= b.length;) {
+          const len = dv.getUint32(p), type = ascii(b, p + 4, p + 8);
+          if (type === 'tEXt' || type === 'zTXt' || type === 'iTXt') { if (!info.found.includes('текстовые поля')) info.found.push('текстовые поля'); }
+          else if (type === 'eXIf') info.found.push('данные EXIF');
+          else if (type === 'tIME') info.found.push('время изменения');
+          p += 12 + len;
+        }
+        return info;
+      }
+      return null;
+    }
+
+    // Возвращает { bytes, type } без метаданных или null, если формат пересохраняется через холст
+    function strip(b) {
+      if (b[0] === 0xFF && b[1] === 0xD8) {
+        const scan = jpegScan(b);
+        if (!scan) return null;
+        let orientation = 1;
+        for (const s of scan.segs) if (s.m === 0xE1 && isExif(b, s.start)) { try { orientation = readExif(b, s.start, s.end).orientation; } catch (e) { /* без поворота */ } }
+        const parts = [b.subarray(0, 2)];
+        const exif = orientation > 1 && orientation <= 8 ? Uint8Array.from([0xFF, 0xE1, 0x00, 0x22, 0x45, 0x78, 0x69, 0x66, 0, 0, 0x4D, 0x4D, 0, 0x2A, 0, 0, 0, 8,
+          0, 1, 0x01, 0x12, 0, 3, 0, 0, 0, 1, 0, orientation, 0, 0, 0, 0, 0, 0]) : null;
+        // по спецификации JFIF (APP0) идёт сразу за SOI, поэтому крошечный EXIF ставим после него
+        let placed = !exif;
+        for (const s of scan.segs) {
+          if (dropJpeg(s.m)) continue;
+          if (!placed && s.m !== 0xE0) { parts.push(exif); placed = true; }
+          parts.push(b.subarray(s.start, s.end));
+        }
+        if (!placed) parts.push(exif);
+        parts.push(b.subarray(scan.sos));
+        return { bytes: concat(parts), type: 'image/jpeg' };
+      }
+      if (b.length > 8 && b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4E && b[3] === 0x47) {
+        const dv = new DataView(b.buffer, b.byteOffset, b.byteLength);
+        const parts = [b.subarray(0, 8)];
+        let p = 8;
+        while (p + 12 <= b.length) {
+          const len = dv.getUint32(p), type = ascii(b, p + 4, p + 8);
+          if (p + 12 + len > b.length) return null;
+          if (!['tEXt', 'zTXt', 'iTXt', 'eXIf', 'tIME'].includes(type)) parts.push(b.subarray(p, p + 12 + len));
+          p += 12 + len;
+          if (type === 'IEND') break;
+        }
+        return { bytes: concat(parts), type: 'image/png' };
+      }
+      return null;
+    }
+
+    function concat(parts) {
+      const out = new Uint8Array(parts.reduce((n, x) => n + x.length, 0));
+      let o = 0;
+      for (const x of parts) { out.set(x, o); o += x.length; }
+      return out;
+    }
+
+    return { read, strip };
+  })();
+
   const api = {
     version: '1.1.0',
     formats: () => Array.from(formats.values()),
@@ -813,7 +980,7 @@
     inputs: ['PNG', 'JPEG', 'WEBP', 'AVIF', 'GIF', 'BMP', 'ICO', 'SVG', 'TIFF', 'HEIC', 'TGA', 'PPM/PGM/PBM'],
     register, registerDecoder,
     decode, prepare, encode, convert, computeSize, outputName,
-    encodeToSize, pdfFromCanvases, zip, supportsMime
+    encodeToSize, pdfFromCanvases, zip, supportsMime, meta
   };
   global.RastrConvert = api;
 })(window);

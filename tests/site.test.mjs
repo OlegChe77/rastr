@@ -246,6 +246,37 @@ test('пресеты: Ozon вписывает фото в 900×1200 и отме�
   assert.deepEqual(errors, []);
 });
 
+test('удаление метаданных: находит камеру в EXIF и отдаёт JPEG без неё', async () => {
+  context = await browser.newContext({ acceptDownloads: true });
+  const page = await context.newPage();
+  errors = [];
+  page.on('pageerror', e => errors.push(e.message));
+  await page.goto(server.url + '/udalit-metadannye-foto/');
+  const b64 = await page.evaluate(() => {
+    const c = document.createElement('canvas'); c.width = 64; c.height = 48;
+    const x = c.getContext('2d'); x.fillStyle = '#cc3333'; x.fillRect(0, 0, 64, 48);
+    return c.toDataURL('image/jpeg', 0.9).split(',')[1];
+  });
+  const jpg = Buffer.from(b64, 'base64');
+  // APP1 с EXIF, где записано только поле Make = «Camera» (little-endian TIFF)
+  const tiff = Buffer.concat([Buffer.from([0x49, 0x49, 0x2A, 0, 8, 0, 0, 0, 1, 0, 0x0F, 0x01, 2, 0, 7, 0, 0, 0, 26, 0, 0, 0, 0, 0, 0, 0]), Buffer.from('Camera\0', 'latin1')]);
+  const len = tiff.length + 8;
+  const app1 = Buffer.concat([Buffer.from([0xFF, 0xE1, len >> 8, len & 255]), Buffer.from('Exif\0\0', 'latin1'), tiff]);
+  const withExif = Buffer.concat([jpg.subarray(0, 2), app1, jpg.subarray(2)]);
+  await page.setInputFiles('#file', [{ name: 'фото.jpg', mimeType: 'image/jpeg', buffer: withExif }]);
+  await idle(page);
+  const row = page.locator('.row').first();
+  assert.match(await row.innerText(), /камера: Camera/);
+  await page.click('#run');
+  await page.locator('.row[data-status="done"]').waitFor({ timeout: 60000 });
+  assert.match(await row.innerText(), /✓ Метаданные удалены, пиксели не тронуты/);
+  const f = await download(page, () => row.getByRole('button', { name: 'Скачать' }).click());
+  assert.equal(f.name, 'фото-без-метаданных.jpg');
+  assert.ok(!f.data.includes(Buffer.from('Camera')) && !f.data.includes(Buffer.from('Exif')), 'метаданные остались в файле');
+  assert.ok(f.data.length < withExif.length, 'файл не стал меньше');
+  assert.deepEqual(errors, []);
+});
+
 test('инструмент «Размер фото»: формат «Как было» сохраняет формат исходника', async () => {
   context = await browser.newContext({ acceptDownloads: true });
   const page = await context.newPage();

@@ -157,6 +157,82 @@
     eq([c.width, c.height], [30, 40]);
   });
 
+  /* ================= метаданные ================= */
+
+  // Синтетический JPEG: JFIF, EXIF (Make, Orientation, GPS 55°45′ с. ш., 37°37′ в. д.), комментарий, заголовок SOS
+  function jpegWithExif(orientation) {
+    const b = [];
+    const u16 = v => b.push((v >> 8) & 255, v & 255);
+    const u32 = v => b.push((v >>> 24) & 255, (v >>> 16) & 255, (v >>> 8) & 255, v & 255);
+    const entry = (tag, type, count, v0, v1) => { u16(tag); u16(type); u32(count); if (v1 === undefined) u32(v0); else { u16(v0); u16(v1); } };
+    b.push(0x4D, 0x4D, 0, 0x2A); u32(8);
+    u16(3);
+    entry(0x010f, 2, 5, 50);
+    entry(0x0112, 3, 1, orientation, 0);
+    entry(0x8825, 4, 1, 56);
+    u32(0);
+    b.push(0x54, 0x65, 0x73, 0x74, 0, 0);                  // «Test» и выравнивание до 56
+    u16(4);
+    u16(1); u16(2); u32(2); b.push(0x4E, 0, 0, 0);          // N
+    entry(2, 5, 3, 110);
+    u16(3); u16(2); u32(2); b.push(0x45, 0, 0, 0);          // E
+    entry(4, 5, 3, 134);
+    u32(0);
+    for (const [n] of [[55], [45], [0], [37], [37], [0]]) { u32(n); u32(1); }
+    const tiff = Uint8Array.from(b);
+    const app1 = cat(Uint8Array.from([0xFF, 0xE1, (tiff.length + 8) >> 8, (tiff.length + 8) & 255]), ascii('Exif'), Uint8Array.from([0, 0]), tiff);
+    const jfif = Uint8Array.from([0xFF, 0xE0, 0, 16, 0x4A, 0x46, 0x49, 0x46, 0, 1, 1, 0, 0, 1, 0, 1, 0, 0]);
+    const com = cat(Uint8Array.from([0xFF, 0xFE, 0, 6]), ascii('hi!!'));
+    const scan = Uint8Array.from([0xFF, 0xDA, 0, 2, 0xAA, 0xBB, 0xFF, 0xD9]);
+    return cat(Uint8Array.from([0xFF, 0xD8]), jfif, app1, com, scan);
+  }
+
+  test('метаданные JPEG: читаются камера, дата, поворот и GPS', () => {
+    const m = R.meta.read(jpegWithExif(6));
+    eq(m.format, 'JPEG');
+    eq(m.make, 'Test');
+    eq(m.orientation, 6);
+    ok(Math.abs(m.gps.lat - 55.75) < 1e-6 && Math.abs(m.gps.lon - 37.6166667) < 1e-4, 'координаты ' + JSON.stringify(m.gps));
+    ok(m.found.includes('место съёмки (GPS)'), 'найдено: ' + m.found);
+    ok(m.found.includes('комментарий'), 'найдено: ' + m.found);
+  });
+
+  test('метаданные JPEG: удаление оставляет только поворот, профиль JFIF и данные сжатия', () => {
+    const src = jpegWithExif(6);
+    const out = R.meta.strip(src);
+    eq(out.type, 'image/jpeg');
+    const m = R.meta.read(out.bytes);
+    eq(m.orientation, 6);
+    eq(m.make, undefined);
+    ok(!m.gps, 'GPS остался');
+    eq(m.found, ['данные EXIF']);
+    eq(Array.from(out.bytes.slice(-8)), [0xFF, 0xDA, 0, 2, 0xAA, 0xBB, 0xFF, 0xD9], 'данные сжатия не тронуты');
+    ok(out.bytes.length < src.length, 'файл не стал меньше');
+    eq(Array.from(out.bytes.slice(2, 6)), [0xFF, 0xE0, 0, 16], 'JFIF на месте');
+  });
+
+  test('метаданные JPEG: без поворота EXIF уходит целиком', () => {
+    const out = R.meta.strip(jpegWithExif(1));
+    eq(R.meta.read(out.bytes).found, []);
+    eq(out.bytes.length, 2 + 18 + 8, 'остались SOI, JFIF и данные сжатия');
+  });
+
+  test('метаданные PNG: удаляются текстовые блоки', () => {
+    const chunk = (type, data) => cat(Uint8Array.from([0, 0, 0, data.length]), ascii(type), data, Uint8Array.from([1, 2, 3, 4]));
+    const png = cat(Uint8Array.from([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]), chunk('IHDR', new Uint8Array(13)), chunk('tEXt', ascii('Author\0me')), chunk('IDAT', Uint8Array.from([9])), chunk('IEND', new Uint8Array(0)));
+    eq(R.meta.read(png).found, ['текстовые поля']);
+    const out = R.meta.strip(png);
+    eq(out.type, 'image/png');
+    eq(R.meta.read(out.bytes).found, []);
+    eq(out.bytes.length, png.length - (12 + 9), 'вырезан ровно один блок');
+  });
+
+  test('метаданные: для остальных форматов и мусора возвращается null', () => {
+    eq(R.meta.read(Uint8Array.from([1, 2, 3, 4])), null);
+    eq(R.meta.strip(Uint8Array.from([1, 2, 3, 4])), null);
+    eq(R.meta.strip(Uint8Array.from([0xFF, 0xD8, 0xFF, 0xE1])), null);
+  });
+
   test('outputName: меняет только последнее расширение', () => {
     eq(R.outputName('photo.final.PNG', 'webp'), 'photo.final.webp');
     eq(R.outputName('без-расширения', 'jpeg'), 'без-расширения.jpg');

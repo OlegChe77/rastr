@@ -177,6 +177,8 @@
         item.decoded = await R.decode(item.file);
         item.width = item.decoded.width; item.height = item.decoded.height;
         item.thumb = makeThumb(item.decoded);
+        // инструмент удаления метаданных: показываем, что спрятано в файле, ещё до обработки
+        if (preset.strip) { try { item.meta = R.meta.read(new Uint8Array(await item.file.arrayBuffer())); } catch (e) { item.meta = null; } }
         item.status = 'ready';
       } catch (err) {
         item.status = 'error'; item.error = err.message;
@@ -221,6 +223,16 @@
       : '<span class="chk chk-ok">✓ Подходит: ' + esc(c.name || 'требования выполнены') + '</span>';
   }
 
+  // Что найдено в файле (инструмент «Удалить метаданные»)
+  function metaLine(item) {
+    if (!preset.strip || item.status === 'loading' || item.status === 'error') return '';
+    const m = item.meta;
+    if (m && m.found.length) return '<span class="chk chk-note">' + (item.status === 'done' ? 'Было в файле: ' : 'В файле найдено: ') + esc(m.found.join(', ')) + '</span>';
+    if (m) return '<span class="chk chk-ok">Метаданных в файле нет</span>';
+    return '<span class="chk chk-note">Формат ' + esc(item.decoded ? item.decoded.format : '') + ': метаданные уберутся при пересохранении</span>';
+  }
+  function strippedName(name, ext) { return (name || 'image').replace(/\.[^.\/\\]+$/, '') + '-без-метаданных.' + ext; }
+
   function renderRow(item) {
     const li = rowEl(item);
     li.dataset.status = item.status;
@@ -239,7 +251,8 @@
         (r.fit ? (r.fit.reached
           ? '<span class="mono fit">≤ ' + fmtLimit(r.fit.limit) + ' · качество ' + Math.round(r.fit.quality * 100) + '%' + (r.fit.scaled ? ' · уменьшено' : '') + '</span>'
           : '<span class="err">не удалось сжать до ' + fmtLimit(r.fit.limit) + '</span>') : '') +
-        checkResult(r);
+        checkResult(r) +
+        (r.stripped ? '<span class="chk chk-ok">✓ Метаданные удалены' + (r.lossless ? ', пиксели не тронуты' : ', файл пересохранён') + '</span>' : '');
     }
     li.innerHTML =
       '<button type="button" class="thumb" data-act="preview" aria-label="Открыть предпросмотр ' + esc(item.name) + '"' + (item.thumb ? '' : ' disabled') + '>' +
@@ -248,6 +261,7 @@
         '<div class="row-name" title="' + esc(item.name) + '">' + esc(item.name) + '</div>' +
         '<div class="row-meta"><span class="tag">' + esc(src) + '</span><span class="mono">' + [dims, fmtSize(item.size)].filter(Boolean).join(' · ') + '</span></div>' +
         '<div class="row-res">' + res + '</div>' +
+        (preset.strip ? '<div class="row-res">' + metaLine(item) + '</div>' : '') +
       '</div>' +
       '<div class="row-actions">' +
         '<button type="button" class="btn" data-act="dl"' + (item.status === 'done' ? '' : ' disabled') + '>' + ICON_DL + 'Скачать</button>' +
@@ -304,6 +318,16 @@
       item.status = 'working'; renderRow(item);
       await new Promise(r => setTimeout(r, 16));
       try {
+        // JPEG и PNG очищаются от метаданных без пересжатия; остальное пересохраняется ниже через холст
+        if (preset.strip) {
+          const st = R.meta.strip(new Uint8Array(await item.file.arrayBuffer()));
+          if (st) {
+            const sf = R.format(st.type === 'image/png' ? 'png' : 'jpeg');
+            item.result = { blob: new Blob([st.bytes], { type: st.type }), name: strippedName(item.name, sf.ext), width: item.width, height: item.height, format: sf, fit: null, stripped: true, lossless: true };
+            item.status = 'done'; ok++; renderRow(item);
+            continue;
+          }
+        }
         const canvas = R.prepare(item.decoded, o);
         const fi = f.id === 'keep' ? keepFormat(item) : f;
         if (single) { pages.push(canvas); item.status = 'ready'; }
@@ -315,6 +339,7 @@
             fit = { limit: o.targetBytes, reached: r.reached, quality: r.quality, scaled: r.scaled };
           } else blob = await R.encode(canvas, fi.id, o);
           item.result = { blob, name: R.outputName(item.name, fi.id), width: w, height: h, format: fi, fit };
+          if (preset.strip) { item.result.stripped = true; item.result.name = strippedName(item.name, fi.ext); }
           item.status = 'done';
         }
         ok++;
@@ -324,6 +349,7 @@
       renderRow(item);
     }
     // цели Метрики для страниц-пресетов: запуск обработки и итог проверки требований
+    if (preset.strip && window.rastrGoal) window.rastrGoal('strip_run');
     if (preset.checks && window.rastrGoal) {
       const slug = location.pathname.replace(/\//g, '');
       window.rastrGoal('preset_run', { preset: slug });

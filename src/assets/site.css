@@ -518,6 +518,9 @@ pre .s { color: #7FD8F0; }
 .target-chips button[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--bg); }
 .sec.is-auto input[type="range"] { opacity: .35; }
 .fit { color: var(--ok); font-weight: 600; }
+.chk { font-weight: 600; padding: 1px 8px; border-radius: 6px; }
+.chk-ok { color: var(--ok); background: var(--ok-soft); }
+.chk-bad { color: var(--err); background: var(--err-soft); }
 
 /* уведомление о cookies (показывает metrika.js на боевом сайте) */
 .cookie-bar {

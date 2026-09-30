@@ -131,7 +131,7 @@
   });
   $('gif-colors').addEventListener('input', () => { $('gif-colors-v').textContent = $('gif-colors').value; });
 
-  const SWATCHES = ['#ffffff', '#000000', '#eef0f5', '#f5e6c8', '#0a86a8', '#d3175e'];
+  const SWATCHES = ['#ffffff', '#000000', '#f2f3f5', '#eef0f5', '#f5e6c8', '#0a86a8', '#d3175e'];
   $('swatches').innerHTML = SWATCHES.map(c => '<button type="button" class="sw" style="background:' + c + '" data-c="' + c + '" aria-label="Фон ' + c + '"></button>').join('');
   $('swatches').addEventListener('click', e => { const b = e.target.closest('.sw'); if (b) $('bg').value = b.dataset.c.toLowerCase(); });
 
@@ -142,8 +142,8 @@
     const m = $('resize-mode').value;
     $('resize-fields').hidden = m === 'none';
     $('f-percent').hidden = m !== 'percent';
-    $('f-w').hidden = !['width', 'fit', 'exact'].includes(m);
-    $('f-h').hidden = !['height', 'fit', 'exact'].includes(m);
+    $('f-w').hidden = !['width', 'fit', 'exact', 'cover', 'pad'].includes(m);
+    $('f-h').hidden = !['height', 'fit', 'exact', 'cover', 'pad'].includes(m);
     updateSummary();
   }
   $('resize-mode').addEventListener('change', updateResizeUI);
@@ -204,6 +204,23 @@
     return li;
   }
 
+  // Проверка результата по требованиям страницы-пресета (preset.checks): формат, стороны, соотношение, вес
+  function checkResult(r) {
+    const c = preset.checks;
+    if (!c) return '';
+    const bad = [];
+    if (c.formats && !c.formats.includes(r.format.id)) bad.push('формат ' + r.format.label);
+    if (c.minW && r.width < c.minW) bad.push('ширина меньше ' + c.minW + ' px');
+    if (c.minH && r.height < c.minH) bad.push('высота меньше ' + c.minH + ' px');
+    if (c.maxW && r.width > c.maxW) bad.push('ширина больше ' + c.maxW + ' px');
+    if (c.maxH && r.height > c.maxH) bad.push('высота больше ' + c.maxH + ' px');
+    if (c.ratio && Math.abs(r.width / r.height - c.ratio[0] / c.ratio[1]) > 0.01) bad.push('пропорции не ' + c.ratio[0] + ':' + c.ratio[1]);
+    if (c.maxBytes && r.blob.size > c.maxBytes) bad.push('вес больше ' + fmtLimit(c.maxBytes));
+    return bad.length
+      ? '<span class="chk chk-bad">✗ Не подходит: ' + esc(bad.join(', ')) + '</span>'
+      : '<span class="chk chk-ok">✓ Подходит: ' + esc(c.name || 'требования выполнены') + '</span>';
+  }
+
   function renderRow(item) {
     const li = rowEl(item);
     li.dataset.status = item.status;
@@ -221,7 +238,8 @@
         '<span class="mono delta ' + (pct <= 0 ? 'down' : 'up') + '">' + (pct > 0 ? '+' : pct < 0 ? '−' : '') + Math.abs(pct) + '%</span>' +
         (r.fit ? (r.fit.reached
           ? '<span class="mono fit">≤ ' + fmtLimit(r.fit.limit) + ' · качество ' + Math.round(r.fit.quality * 100) + '%' + (r.fit.scaled ? ' · уменьшено' : '') + '</span>'
-          : '<span class="err">не удалось сжать до ' + fmtLimit(r.fit.limit) + '</span>') : '');
+          : '<span class="err">не удалось сжать до ' + fmtLimit(r.fit.limit) + '</span>') : '') +
+        checkResult(r);
     }
     li.innerHTML =
       '<button type="button" class="thumb" data-act="preview" aria-label="Открыть предпросмотр ' + esc(item.name) + '"' + (item.thumb ? '' : ' disabled') + '>' +
@@ -386,6 +404,7 @@
     if (preset.resize.width) $('resize-w').value = preset.resize.width;
     if (preset.resize.height) $('resize-h').value = preset.resize.height;
   }
+  if (preset.background) $('bg').value = preset.background;
   if (preset.pdfSingle) $('pdf-single').checked = true;
   if (preset.targetKB) { $('target-on').checked = true; $('target-kb').value = preset.targetKB; }
   syncTarget();

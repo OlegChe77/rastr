@@ -117,6 +117,24 @@ services:
         source: /instrumenty
         destination: /instrumenty/
       - type: redirect
+        source: /foto-pod-trebovaniya
+        destination: /foto-pod-trebovaniya/
+      - type: redirect
+        source: /foto-dlya-gosuslug
+        destination: /foto-dlya-gosuslug/
+      - type: redirect
+        source: /foto-dlya-ozon
+        destination: /foto-dlya-ozon/
+      - type: redirect
+        source: /foto-dlya-wildberries
+        destination: /foto-dlya-wildberries/
+      - type: redirect
+        source: /foto-dlya-avito
+        destination: /foto-dlya-avito/
+      - type: redirect
+        source: /stiker-telegram-iz-foto
+        destination: /stiker-telegram-iz-foto/
+      - type: redirect
         source: /formaty
         destination: /formaty/
       - type: redirect

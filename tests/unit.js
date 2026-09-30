@@ -127,6 +127,31 @@
     near(pixelAt({ source: v, width: 40, height: 30 }, 5, 25), [255, 0, 0, 255], 2, 'flipV: красное снизу');
   });
 
+  test('computeSize: «cover» и «pad» дают ровно заданную рамку', () => {
+    eq(R.computeSize(400, 200, { mode: 'cover', width: 90, height: 120 }), { width: 90, height: 120 });
+    eq(R.computeSize(400, 200, { mode: 'pad', width: 90, height: 120 }), { width: 90, height: 120 });
+  });
+
+  test('prepare: «pad» вписывает картинку целиком и заливает поля фоном', () => {
+    // 40×30 в рамку 30×40: картинка 30×22.5 по центру, сверху и снизу поля
+    const c = R.prepare(fixture(), { resize: { mode: 'pad', width: 30, height: 40 }, background: '#00ff00' });
+    eq([c.width, c.height], [30, 40]);
+    const d = { source: c, width: 30, height: 40 };
+    near(pixelAt(d, 15, 2), [0, 255, 0, 255], 2, 'верхнее поле');
+    near(pixelAt(d, 15, 38), [0, 255, 0, 255], 2, 'нижнее поле');
+    near(pixelAt(d, 5, 15), [255, 0, 0, 255], 2, 'красная половина внутри');
+    near(pixelAt(d, 25, 15), [0, 0, 255, 255], 2, 'синяя половина внутри');
+  });
+
+  test('prepare: «cover» заполняет рамку и обрезает края', () => {
+    const c = R.prepare(fixture(), { resize: { mode: 'cover', width: 30, height: 40 } });
+    eq([c.width, c.height], [30, 40]);
+    const d = { source: c, width: 30, height: 40 };
+    near(pixelAt(d, 5, 5), [255, 0, 0, 255], 2, 'красная половина слева');
+    near(pixelAt(d, 25, 5), [0, 0, 255, 255], 2, 'синяя половина справа');
+    eq(pixelAt(d, 15, 38)[3], 0, 'низ остался прозрачным, как у исходника: полей фоном не заливаем');
+  });
+
   test('prepare: отрицательный угол нормализуется', () => {
     const c = R.prepare(fixture(), { rotate: -90 });
     eq([c.width, c.height], [30, 40]);

@@ -1,5 +1,5 @@
 // Шаблоны страниц: <head> с SEO-разметкой, шапка, хлебные крошки, конвертер, подвал.
-import { landings, tools, converters } from './content/landings.mjs';
+import { landings, tools, converters, presets } from './content/landings.mjs';
 import { documents } from './content/documents.mjs';
 
 export const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -151,7 +151,7 @@ function footer(site) {
   const col = (title, items) => `<div class="foot-col"><h2>${title}</h2><ul>${items.map(([href, label]) => `<li><a href="${href}">${esc(label)}</a></li>`).join('')}</ul></div>`;
   const conv = [['/konverter-izobrazhenij/', 'Конвертер изображений']].concat(converters.map(l => [`/${l.slug}/`, plainCard(l)]));
   const dl = documents.map(d => [`/${d.slug}/`, plainCard(d)]).concat([['/dokumenty/', 'Все документы']]);
-  const tl = tools.map(l => [`/${l.slug}/`, l.card[0]]).concat([['/instrumenty/', 'Все инструменты']]);
+  const tl = tools.map(l => [`/${l.slug}/`, l.card[0]]).concat(presets.map(l => [`/${l.slug}/`, l.card[0]]), [['/foto-pod-trebovaniya/', 'Все пресеты'], ['/instrumenty/', 'Все инструменты']]);
   return `<footer class="site-foot">
   <div class="wrap">
     <div class="foot-grid">
@@ -253,6 +253,8 @@ export function converter() {
         <option value="height">По высоте</option>
         <option value="fit">Вписать в рамку</option>
         <option value="exact">Точный размер (растянуть)</option>
+        <option value="cover">Заполнить рамку (обрезать края)</option>
+        <option value="pad">Вписать с полями (цвет фона)</option>
       </select>
       <div class="inline" id="resize-fields">
         <div class="field" id="f-percent"><input type="number" id="resize-percent" min="1" max="1000" value="50" aria-label="Процент"></div>

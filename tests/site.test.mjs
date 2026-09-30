@@ -215,6 +215,37 @@ test('сжатие до 200 КБ: тяжёлое фото укладываетс
   assert.match(await page.locator('#quality-v').innerText(), /^\d+%$/);
 });
 
+test('пресеты: Ozon вписывает фото в 900×1200 и отмечает, что оно подходит; Госуслуги обрезают до 3:4', async () => {
+  context = await browser.newContext({ acceptDownloads: true });
+  const page = await context.newPage();
+  errors = [];
+  page.on('pageerror', e => errors.push(e.message));
+  await page.goto(server.url + '/foto-dlya-ozon/');
+  await page.setInputFiles('#file', [{ name: 'товар.bmp', mimeType: 'image/bmp', buffer: bmp(1200, 800, [200, 80, 40]) }]);
+  await idle(page);
+  assert.equal(await page.locator('#resize-mode').inputValue(), 'pad');
+  await page.click('#run');
+  await page.locator('.row[data-status="done"]').waitFor({ timeout: 60000 });
+  const row = page.locator('.row').first();
+  assert.match(await row.innerText(), /900×1200/);
+  assert.match(await row.innerText(), /✓ Подходит/);
+  const f = await download(page, () => row.getByRole('button', { name: 'Скачать' }).click());
+  assert.equal(f.name, 'товар.jpg');
+
+  // Госуслуги: режим «Заполнить рамку», вес не больше 500 КБ
+  await page.goto(server.url + '/foto-dlya-gosuslug/');
+  assert.equal(await page.locator('#resize-mode').inputValue(), 'cover');
+  await page.setInputFiles('#file', [{ name: 'лицо.bmp', mimeType: 'image/bmp', buffer: noisyBmp(1600, 1200) }]);
+  await idle(page);
+  await page.click('#run');
+  await page.locator('.row[data-status="done"]').waitFor({ timeout: 60000 });
+  const g = page.locator('.row').first();
+  assert.match(await g.innerText(), /✓ Подходит/);
+  const gf = await download(page, () => g.getByRole('button', { name: 'Скачать' }).click());
+  assert.ok(gf.data.length <= 500000, 'вес ' + gf.data.length + ' байт');
+  assert.deepEqual(errors, []);
+});
+
 test('инструмент «Размер фото»: формат «Как было» сохраняет формат исходника', async () => {
   context = await browser.newContext({ acceptDownloads: true });
   const page = await context.newPage();

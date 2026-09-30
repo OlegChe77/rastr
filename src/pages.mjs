@@ -1,11 +1,12 @@
 // Все страницы сайта. Каждая: путь, title, description, ключевые слова, тело и разметка schema.org.
-import { landings, tools, converters } from './content/landings.mjs';
+import { landings, tools, converters, presets } from './content/landings.mjs';
 import { formatInfo } from './content/formats.mjs';
 import { documents, docGroups } from './content/documents.mjs';
 import { esc, converter, docConverter, hero, faqHtml, faqSchema, linksGrid, toolsGrid, steps, crumbsSchema, cardTitle, ICONS } from './layout.mjs';
 
 const HOME = { name: 'Главная', path: '/' };
 const TOOLS_CRUMB = { name: 'Инструменты', path: '/instrumenty/' };
+const PRESETS_CRUMB = { name: 'Фото под требования', path: '/foto-pod-trebovaniya/' };
 const DOCS_CRUMB = { name: 'Документы', path: '/dokumenty/' };
 const IMAGES_CRUMB = { name: 'Картинки', path: '/konverter-izobrazhenij/' };
 
@@ -126,6 +127,7 @@ ${section('why', 'Почему Растр', null, FEATURES)}
 ${section('popular', 'Конвертеры картинок', 'Страницы с готовыми настройками под частые пары форматов. <a href="/konverter-izobrazhenij/">Открыть конвертер изображений</a>.', linksGrid(converters))}
 ${section('docs', 'Конвертер документов', 'PDF, Word, Excel, CSV, TXT и Markdown — тоже прямо в браузере. <a href="/dokumenty/">Все конвертеры документов</a>.', linksGrid(documents.slice(0, 8)))}
 ${section('tools', 'Инструменты для фото', 'Отдельные сервисы под частые задачи: уменьшить вес, уложиться в лимит сайта, поменять размер.', toolsGrid(tools))}
+${section('presets', 'Фото под требования сайтов', 'Госуслуги, Ozon, Wildberries, Авито, Telegram: нужный размер, формат и вес в один клик, с проверкой результата. <a href="/foto-pod-trebovaniya/">Все пресеты</a>.', toolsGrid(presets))}
 ${section('formats', 'Какой формат выбрать', 'Коротко о форматах картинок. Подробнее о каждом — в <a href="/formaty/">справочнике форматов</a>.', formatsTable(formats, false))}
 ${section('faq', 'Частые вопросы', null, faqHtml(HOME_FAQ))}`
   });
@@ -178,8 +180,8 @@ ${section('popular', 'Конвертеры форматов', 'Готовые н
   for (const l of landings) {
     const path = `/${l.slug}/`;
     const name = l.card[1] ? `${l.card[0]} в ${l.card[1]}` : l.card[0];
-    const isTool = l.kind === 'tool';
-    const crumbs = isTool ? [HOME, TOOLS_CRUMB, { name, path }] : [HOME, IMAGES_CRUMB, { name, path }];
+    const isTool = l.kind === 'tool' || l.kind === 'preset';
+    const crumbs = l.kind === 'preset' ? [HOME, PRESETS_CRUMB, { name, path }] : isTool ? [HOME, TOOLS_CRUMB, { name, path }] : [HOME, IMAGES_CRUMB, { name, path }];
     const related = l.related.map(s => landings.find(x => x.slug === s)).filter(Boolean);
     pages.push({
       path, file: `${l.slug}/index.html`, ogKey: l.slug, priority: '0.9', changefreq: 'monthly',
@@ -192,7 +194,9 @@ ${section('popular', 'Конвертеры форматов', 'Готовые н
 ${l.sections.map(s => `<h2>${esc(s.h)}</h2>${s.html}`).join('\n')}
 </div></section>
 ${section('faq', 'Вопросы и ответы', null, faqHtml(l.faq))}
-${isTool
+${l.kind === 'preset'
+  ? section('more', 'Другие пресеты', null, toolsGrid(presets.filter(x => x !== l))) + '\n' + section('tools', 'Инструменты для фото', null, toolsGrid(tools))
+  : isTool
   ? section('more', 'Другие инструменты', null, toolsGrid(tools.filter(x => x !== l))) + '\n' + section('conv', 'Конвертеры форматов', null, linksGrid(converters.slice(0, 8)))
   : section('more', 'Другие конвертеры', null, linksGrid(related.concat(landings.filter(x => x !== l && !related.includes(x)).slice(0, 4))))}`
     });
@@ -258,6 +262,48 @@ ${docGroups.map(g => section('g-' + g.id, g.title, g.sub, linksGrid(documents.fi
   <p>Нужно сделать PDF из фотографий или сканов? Для этого есть конвертер картинок: <a href="/jpg-v-pdf/">JPG в PDF</a>.</p>
 </div></section>
 ${section('faq', 'Вопросы о конвертере документов', null, faqHtml(faq))}`
+    });
+  }
+
+  /* ---------- раздел «Фото под требования» ---------- */
+  {
+    const path = '/foto-pod-trebovaniya/';
+    const crumbs = [HOME, PRESETS_CRUMB];
+    const desc = 'Готовые настройки фото под Госуслуги, Ozon, Wildberries, Авито и стикеры Telegram: размер, формат и вес. Растр проверяет результат. Работает в браузере.';
+    const faq = [
+      { q: 'Что такое пресет?', a: 'Это страница с уже подобранными настройками под требования конкретного сайта: размер в пикселях, пропорции, формат и вес. Вам остаётся добавить фото и нажать кнопку.' },
+      { q: 'Как Растр понимает, что фото подходит?', a: 'После обработки он сверяет итоговый файл с числами из таблицы на странице: формат, стороны, пропорции и вес. Рядом с файлом появляется отметка «Подходит» или причина, почему нет.' },
+      { q: 'Насколько можно доверять требованиям на страницах?', a: 'Мы собрали их из открытых руководств на сентябрь 2026 года. Площадки меняют правила, поэтому перед важной загрузкой сверьтесь с подсказкой на самом сайте. Числа при необходимости можно поменять вручную в блоке «Размер».' },
+      { q: 'Фото уходят на сервер?', a: 'Нет, всё выполняется в вашем браузере, как и в других инструментах Растра.' }
+    ];
+    pages.push({
+      path, file: 'foto-pod-trebovaniya/index.html', ogKey: 'foto-pod-trebovaniya', priority: '0.8', changefreq: 'monthly', crumbs,
+      title: 'Фото под требования сайтов: Госуслуги, Ozon, Авито | Растр',
+      description: desc,
+      keywords: 'фото под требования сайта, размер фото для госуслуг, размер фото для ozon, размер фото для авито, размер фото wildberries, стикер telegram из фото',
+      schema: [crumbsSchema(site, crumbs), faqSchema(faq), {
+        '@context': 'https://schema.org', '@type': 'ItemList', name: 'Фото под требования сайтов',
+        itemListElement: presets.map((l, i) => ({ '@type': 'ListItem', position: i + 1, name: l.card[0], url: site.url + '/' + l.slug + '/' }))
+      }],
+      body: `${hero({ h1: 'Фото под требования сайтов', lead: 'Выберите, куда нужно загрузить фото. Растр сам подгонит размер, формат и вес и проверит, подойдёт ли результат.', chips: false })}
+<section class="wrap">${toolsGrid(presets)}</section>
+<section class="wrap section"><div class="prose">
+  <h2>Чем это отличается от обычного конвертера</h2>
+  <p>В обычном конвертере вы сами выбираете формат, размер и качество. Здесь все числа уже подобраны под конкретную площадку, а после обработки Растр проверяет итоговый файл и показывает отметку у каждого фото.</p>
+  <div class="card table-wrap"><table>
+    <thead><tr><th>Куда загружаете</th><th>Что подгоняем</th></tr></thead>
+    <tbody>
+      <tr><td><a href="/foto-dlya-gosuslug/">Госуслуги</a></td><td>JPG, 3:4, 900×1200, до 500 КБ</td></tr>
+      <tr><td><a href="/foto-dlya-ozon/">Ozon</a></td><td>3:4, 900×1200, JPG или PNG, до 10 МБ</td></tr>
+      <tr><td><a href="/foto-dlya-wildberries/">Wildberries</a></td><td>3:4, 900×1200, до 10 МБ</td></tr>
+      <tr><td><a href="/foto-dlya-avito/">Авито</a></td><td>4:3, 1600×1200, JPG вместо HEIC</td></tr>
+      <tr><td><a href="/stiker-telegram-iz-foto/">Стикер Telegram</a></td><td>WEBP, 512 px, до 512 КБ</td></tr>
+    </tbody>
+  </table></div>
+  <p>Требования площадок меняются. Мы указываем дату, на которую они собраны, а важные числа при необходимости можно поменять вручную в блоке «Размер».</p>
+</div></section>
+${section('faq', 'Вопросы о пресетах', null, faqHtml(faq))}
+${section('tools', 'Инструменты для фото', null, toolsGrid(tools))}`
     });
   }
 

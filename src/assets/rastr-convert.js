@@ -118,7 +118,7 @@
       case 'width': W = r.width; H = h * r.width / w; break;
       case 'height': H = r.height; W = w * r.height / h; break;
       case 'fit': { const s = Math.min(r.width / w, r.height / h); W = w * s; H = h * s; break; }
-      case 'exact': W = r.width; H = r.height; break;
+      case 'exact': case 'cover': case 'pad': W = r.width; H = r.height; break;
     }
     W = Math.min(MAX_SIDE, Math.max(1, Math.round(W || w)));
     H = Math.min(MAX_SIDE, Math.max(1, Math.round(H || h)));
@@ -135,10 +135,18 @@
     const x = ctx2d(c);
     x.imageSmoothingEnabled = true;
     x.imageSmoothingQuality = 'high';
+    // «cover» обрезает лишнее по краям, «pad» вписывает картинку целиком и заливает поля фоном
+    const mode = o.resize && o.resize.mode;
+    let dw = w, dh = h;
+    if (mode === 'cover' || mode === 'pad') {
+      const k = (mode === 'cover' ? Math.max : Math.min)(w / decoded.width, h / decoded.height);
+      dw = decoded.width * k; dh = decoded.height * k;
+      if (mode === 'pad') { x.fillStyle = o.background || '#ffffff'; x.fillRect(0, 0, c.width, c.height); }
+    }
     x.translate(c.width / 2, c.height / 2);
     x.rotate(rot * Math.PI / 180);
     x.scale(o.flipH ? -1 : 1, o.flipV ? -1 : 1);
-    x.drawImage(decoded.source, -w / 2, -h / 2, w, h);
+    x.drawImage(decoded.source, -dw / 2, -dh / 2, dw, dh);
     return c;
   }
 

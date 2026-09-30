@@ -158,7 +158,7 @@ function footer(site) {
       <div>
         <a class="logo" href="/" aria-label="Растр, на главную">${LOGO_MARK}<b>Растр</b></a>
         <p>Бесплатный конвертер картинок и документов, который работает прямо в браузере. Файлы не покидают ваше устройство.</p>
-        <p class="foot-also">Ещё один наш сервис: <a href="https://seotoolkitru.onrender.com/" target="_blank" rel="noopener">SEO Toolkit</a> — бесплатные SEO-инструменты в браузере.</p>
+        <p class="foot-also">Другие наши сервисы: <a href="https://seotoolkitru.onrender.com/" target="_blank" rel="noopener">SEO Toolkit</a> — бесплатные SEO-инструменты в браузере; <a href="https://ytkombain.onrender.com/" target="_blank" rel="noopener">YouTube Комбайн</a> — бесплатные инструменты для YouTube.</p>
       </div>
       ${col('Картинки', conv)}
       ${col('Документы', dl)}

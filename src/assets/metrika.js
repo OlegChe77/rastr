@@ -21,6 +21,11 @@
     referrer: document.referrer, url: location.href, accurateTrackBounce: true, trackLinks: true
   });
 
+  // Цели Метрики (тип «JavaScript-событие»): app.js вызывает window.rastrGoal('preset_run') и т. п.
+  window.rastrGoal = function (name, params) {
+    try { window.ym(id, 'reachGoal', name, params); } catch (e) { /* статистика не должна ломать сайт */ }
+  };
+
   /* ---------- уведомление о cookies ---------- */
   var KEY = 'rastr.cookies';
   try { if (localStorage.getItem(KEY)) return; } catch (e) { /* без хранилища просто покажем уведомление */ }

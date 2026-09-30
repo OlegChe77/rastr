@@ -323,6 +323,13 @@
       }
       renderRow(item);
     }
+    // цели Метрики для страниц-пресетов: запуск обработки и итог проверки требований
+    if (preset.checks && window.rastrGoal) {
+      const slug = location.pathname.replace(/\//g, '');
+      window.rastrGoal('preset_run', { preset: slug });
+      const done = items.filter(i => i.status === 'done' && i.result);
+      if (done.length) window.rastrGoal(done.every(i => !/chk-bad/.test(checkResult(i.result))) ? 'preset_ok' : 'preset_bad', { preset: slug });
+    }
     if (single && pages.length) {
       try {
         const blob = await R.pdfFromCanvases(pages, o);

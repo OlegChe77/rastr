@@ -59,6 +59,7 @@ const cards = [
   { key: 'formaty', title: 'Форматы изображений', sub: 'PNG, JPG, WEBP, AVIF, HEIC и другие' },
   { key: 'dokumenty', title: 'Конвертер документов', sub: 'PDF · Word · Excel · CSV · Markdown' },
   { key: 'instrumenty', title: 'Инструменты для фото', sub: 'Сжать · Сжать до N КБ · Изменить размер' },
+  { key: 'foto-pod-trebovaniya', title: 'Фото под требования сайтов', sub: 'Госуслуги · Ozon · Wildberries · Авито · Telegram' },
   { key: 'instrukciya', title: 'Как конвертировать изображения', sub: 'Инструкция к Растру' },
   ...landings.concat(documents).map(l => ({ key: l.slug, title: l.card[1] ? `${l.card[0]} <b>→</b> ${l.card[1]}` : l.card[0], sub: l.card[2] + ' · онлайн, бесплатно', big: !!l.card[1] }))
 ];
